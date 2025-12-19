@@ -104,6 +104,7 @@ model Opportunity {
   status      String            @default("PENDING") // Enum removed for SQLite
   dume_data   String?           // Future use (Stored as JSON string)
   decision_token String?        @unique
+  processedAt DateTime?         // Date when AI analysis was completed
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 

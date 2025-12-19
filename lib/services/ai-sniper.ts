@@ -63,27 +63,41 @@ export async function analyzeTender(opportunityId: string) {
     
     CRITÈRES CLIENT:
     ${rulesText}
-    
+
     TA MISSION:
-    1. Vérifie si le projet est viable (pas de mots-clés interdits, correspond au secteur).
-    2. Si REJET : Réponds uniquement "REJET".
-    3. Si OK : Génère un résumé stratégique structuré en HTML simplifié (sans balises <html> ou <body>, juste le contenu).
+    Tu dois valider (VALIDATED) tout marché qui matche les mots-clés métier du client (ex: Peinture, Nettoyage, etc.) et ne rejeter (REJECTED) que le bruit total (ex: carburant, fournitures de bureau, études sans rapport).
+    Soyons moins restrictifs : dans le doute, on valide pour ne pas rater d'opportunité.
     
-    FORMAT ATTENDU SI OK (Respecte scrupuleusement ce format) :
-    
-    <strong>💰 Budget Estimé :</strong> [Montant ou "Non précisé"]<br>
-    <strong>⚠️ Vigilance :</strong> [Point critique 1], [Point critique 2]<br>
-    <strong>⭐ Potentiel :</strong> [Analyse rapide de succès]<br>
-    <br>
-    [Résumé court de 2 phrases sur l'objet du marché]
+    FORMAT JSON STRICT ATTENDU:
+    Réponds uniquement avec un objet JSON valide, sans markdown, sans texte autour.
+    Structure :
+    {
+      "decision": "VALIDATED" | "REJECTED",
+      "reasoning": "Explication courte en une phrase.",
+      "client_summary": {
+         "title": "Titre accrocheur pour le client",
+         "key_points": ["Point fort 1", "Point fort 2"],
+         "urgency": "HAUTE" | "MOYENNE" | "FAIBLE",
+         "whatsapp_hook": "Phrase d'accroche courte pour notification WhatsApp (ex: 'Marché de peinture 150k€ détecté à Lyon !')"
+      }
+    }
   `;
 
     try {
-        let aiResponse = "";
+        let aiData: any = {};
 
         if (!process.env.OPENAI_API_KEY) {
             console.log("⚠️ [AI Sniper] OPENAI_API_KEY missing. Using Fallback response.");
-            aiResponse = "✅ OPPORTUNITÉ VALIDÉE. Ce projet correspond parfaitement aux critères techniques et financiers. Marge estimée : 20%. Points de vigilance : Aucun identifié à ce stade.";
+            aiData = {
+                decision: "VALIDATED",
+                reasoning: "Mode démo (pas de clé API).",
+                client_summary: {
+                    title: "Marché Démo",
+                    key_points: ["Rentabilité haute", "Client public"],
+                    urgency: "HAUTE",
+                    whatsapp_hook: "🔥 Opportunité démo détectée !"
+                }
+            };
         } else {
             // 3. Call OpenAI
             const completion = await openai.chat.completions.create({
@@ -92,42 +106,53 @@ export async function analyzeTender(opportunityId: string) {
                     { role: "system", content: systemPrompt },
                     { role: "user", content: `Analysons cet appel d'offres :\n${tenderText}` },
                 ],
-                temperature: 0.1, // Low temperature for consistent analysis
+                temperature: 0.1,
+                response_format: { type: "json_object" } // Enforce JSON
             });
 
-            aiResponse = completion.choices[0]?.message?.content?.trim() || "Erreur analyse";
+            const content = completion.choices[0]?.message?.content?.trim() || "{}";
+            try {
+                aiData = JSON.parse(content);
+            } catch (e) {
+                console.error("❌ [AI Sniper] Failed to parse JSON:", content);
+                aiData = { decision: "REJECTED", reasoning: "Erreur format IA" };
+            }
         }
 
-        console.log(`🧠 [AI Sniper] AI Response: ${aiResponse.substring(0, 50)}...`);
+        console.log(`🧠 [AI Sniper] Decision: ${aiData.decision}`);
 
         // 4. Update Database
-        if (aiResponse.startsWith("REJET")) {
+        if (aiData.decision === "REJECTED") {
             await db.opportunity.update({
                 where: { id: opportunityId },
                 data: {
-                    status: "AUTO_REJECTED", // Make sure this enum exists
-                    ai_analysis: "Rejeté par l'IA (Non conforme aux critères).",
+                    status: "AUTO_REJECTED",
+                    ai_analysis: aiData.reasoning,
                     match_score: 0,
+                    processedAt: new Date(),
                 },
             });
             console.log(`🗑️ [AI Sniper] Opportunity AUTO_REJECTED.`);
+            return { status: "REJECTED" };
         } else {
-            // Clean up "OK:" prefix if present (Legacy safety, though new prompt shouldn't generate it)
-            const cleanAnalysis = aiResponse.replace(/^OK:\s*/i, "").trim();
-
+            // Updated Validated Logic
             await db.opportunity.update({
                 where: { id: opportunityId },
                 data: {
-                    status: "WAITING_CLIENT_DECISION", // Make sure this enum exists
-                    ai_analysis: cleanAnalysis,
-                    match_score: 85, // Placeholder score
+                    status: "WAITING_CLIENT_DECISION",
+                    // Store the full JSON summary in ai_analysis field (it's a string field)
+                    ai_analysis: JSON.stringify(aiData.client_summary),
+                    match_score: 85,
+                    processedAt: new Date(),
                 },
             });
-            console.log(`✅ [AI Sniper] Opportunity PROCESSED. Waiting client decision.`);
+            console.log(`✅ [AI Sniper] Opportunity VALIDATED.`);
+            return { status: "VALIDATED", summary: aiData.client_summary };
         }
 
     } catch (error) {
         console.error("❌ [AI Sniper] OpenAI Error:", error);
-        // Optionally set status to ERROR or retry later
+        // Return error status so logic can continue or retry
+        return { status: "ERROR", error: error };
     }
 }
