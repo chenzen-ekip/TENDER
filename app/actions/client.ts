@@ -101,3 +101,91 @@ export async function createClientAction(prevState: ClientFormState, formData: F
         return { success: false, message: "Erreur serveur lors de la création du client." };
     }
 }
+// ... existing code ...
+
+/**
+ * Server Action to update an existing client.
+ */
+export async function updateClientAction(clientId: string, prevState: ClientFormState, formData: FormData): Promise<ClientFormState> {
+    // 1. Validate Form Data
+    const rawData = Object.fromEntries(formData.entries());
+    const validated = ClientFormSchema.safeParse(rawData);
+
+    if (!validated.success) {
+        return {
+            success: false,
+            message: "Erreur de validation.",
+            errors: validated.error.flatten().fieldErrors,
+        };
+    }
+
+    const data = validated.data;
+
+    try {
+        // 2. Database Transaction
+        await db.$transaction(async (tx) => {
+            // Update Client Basic Info
+            await tx.client.update({
+                where: { id: clientId },
+                data: {
+                    name: data.name,
+                    whatsapp_phone: data.whatsapp,
+                    sector: data.sector,
+                    certifications: data.certifications.join(", "),
+                },
+            });
+
+            // Update Relations (Easy way: Delete all and re-create)
+            // Keywords
+            await tx.clientKeyword.deleteMany({ where: { clientId } });
+            await tx.clientKeyword.createMany({
+                data: data.keywords.map((k) => ({ word: k, clientId })),
+            });
+
+            // Departments
+            await tx.clientDepartment.deleteMany({ where: { clientId } });
+            await tx.clientDepartment.createMany({
+                data: data.departments.map((d) => ({ code: d, clientId })),
+            });
+
+            // Update SearchConfig
+            // Upsert in case it was missing for some reason
+            await tx.searchConfig.upsert({
+                where: { clientId },
+                update: {
+                    marketType: data.marketType,
+                    minBudget: data.minBudget,
+                },
+                create: {
+                    clientId,
+                    marketType: data.marketType,
+                    minBudget: data.minBudget,
+                }
+            });
+
+            // Update SniperRules
+            await tx.sniperRules.upsert({
+                where: { clientId },
+                update: {
+                    mustHaveCertifications: data.mustHaveCerts.join(", "),
+                    forbiddenKeywords: data.forbiddenKeywords.join(", "),
+                    minProfitability: data.minProfitability,
+                },
+                create: {
+                    clientId,
+                    mustHaveCertifications: data.mustHaveCerts.join(", "),
+                    forbiddenKeywords: data.forbiddenKeywords.join(", "),
+                    minProfitability: data.minProfitability,
+                }
+            });
+        });
+
+        revalidatePath("/admin/clients");
+        revalidatePath("/"); // Also revalidate home if dashboard is there
+        return { success: true, message: "Client mis à jour avec succès !" };
+
+    } catch (error) {
+        console.error("Failed to update client:", error);
+        return { success: false, message: "Erreur serveur lors de la mise à jour." };
+    }
+}

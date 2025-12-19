@@ -92,8 +92,9 @@ export default async function Home() {
                     <Badge variant="secondary">{client._count.opportunities}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {/* Add Edit/Delete buttons here later */}
-                    <Button variant="ghost" size="sm">Gérer</Button>
+                    <ClientForm initialData={client}>
+                      <Button variant="ghost" size="sm">Gérer</Button>
+                    </ClientForm>
                   </TableCell>
                 </TableRow>
               ))

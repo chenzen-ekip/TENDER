@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClientAction } from "@/app/actions/client";
+import { createClientAction, updateClientAction } from "@/app/actions/client";
+// ... imports ...
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -29,7 +30,6 @@ import { DEPARTMENTS } from "@/constants/departments";
 import { DESCRIPTORS } from "@/constants/descriptors";
 
 // Schema adapted for Frontend Form Management (Arrays)
-// Schema adapted for Frontend Form Management (Arrays)
 const formSchema = z.object({
     name: z.string().min(2, "Nom requis (min 2)"),
     whatsapp: z.string().min(10, "Numéro valide requis"),
@@ -44,26 +44,51 @@ const formSchema = z.object({
     minProfitability: z.coerce.number(),
 });
 
-export function ClientForm() {
+interface ClientFormProps {
+    initialData?: any; // Start loose, refine if needed
+    children?: React.ReactNode; // Custom trigger
+}
+
+export function ClientForm({ initialData, children }: ClientFormProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
 
+    const isEdit = !!initialData;
+
+    // Default values logic
+    const defaultValues = isEdit ? {
+        name: initialData.name,
+        whatsapp: initialData.whatsapp_phone || "",
+        sector: initialData.sector || "",
+        certifications: initialData.certifications || "",
+        keywords: initialData.keywords.map((k: any) => k.word),
+        departments: initialData.departments.map((d: any) => d.code),
+        marketType: initialData.searchConfig?.marketType || "Services",
+        minBudget: initialData.searchConfig?.minBudget || 0,
+        mustHaveCerts: initialData.sniperRules?.mustHaveCertifications || "",
+        forbiddenKeywords: initialData.sniperRules?.forbiddenKeywords || "",
+        minProfitability: initialData.sniperRules?.minProfitability || 10,
+    } : {
+        name: "",
+        whatsapp: "",
+        sector: "Nettoyage",
+        certifications: "",
+        keywords: [],
+        departments: [],
+        marketType: "Services",
+        minBudget: 0,
+        mustHaveCerts: "",
+        forbiddenKeywords: "",
+        minProfitability: 10,
+    };
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema) as any,
-        defaultValues: {
-            name: "",
-            whatsapp: "",
-            sector: "Nettoyage",
-            certifications: "",
-            keywords: [],
-            departments: [],
-            marketType: "Services",
-            minBudget: 0,
-            mustHaveCerts: "",
-            forbiddenKeywords: "",
-            minProfitability: 10,
-        },
+        defaultValues,
     });
+
+    // Reset form when opening dialog with new data (if feasible) or just rely on key
+    // For simplicity in list mapping, we usually let the component remount or use key.
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         startTransition(async () => {
@@ -84,11 +109,16 @@ export function ClientForm() {
             formData.append("keywords", values.keywords.join(","));
             formData.append("departments", values.departments.join(","));
 
-            const result = await createClientAction({}, formData);
+            let result;
+            if (isEdit) {
+                result = await updateClientAction(initialData.id, {}, formData);
+            } else {
+                result = await createClientAction({}, formData);
+            }
 
             if (result.success) {
                 setOpen(false);
-                form.reset();
+                if (!isEdit) form.reset(); // Don't reset on edit, keeps values
             } else {
                 console.error(result.message);
                 alert(result.message);
@@ -104,14 +134,16 @@ export function ClientForm() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Ajouter un Client
-                </Button>
+                {children ? children : (
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Ajouter un Client
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Nouveau Client</DialogTitle>
+                    <DialogTitle>{isEdit ? "Modifier Client" : "Nouveau Client"}</DialogTitle>
                     <DialogDescription>
                         Configurez le client avec précision (Départements et Métiers BOAMP).
                     </DialogDescription>
@@ -261,7 +293,7 @@ export function ClientForm() {
                         <div className="flex justify-end pt-4">
                             <Button type="submit" disabled={isPending}>
                                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Créer le Client
+                                {isEdit ? "Mettre à jour" : "Créer le Client"}
                             </Button>
                         </div>
                     </form>
