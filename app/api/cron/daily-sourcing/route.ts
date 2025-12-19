@@ -7,6 +7,8 @@ import { sendOpportunityAlert } from "@/lib/services/notification.service";
 
 // Prevent caching
 export const dynamic = 'force-dynamic';
+// Deploy Trigger: V2 Flux Mode
+
 
 export async function GET(request: Request) {
     // 0. Security Check - REMOVED for Easy Trigger
