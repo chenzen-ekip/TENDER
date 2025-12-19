@@ -19,7 +19,7 @@ export async function fetchRawTenders(lastCheckDate: Date) {
 
     // On force la recherche depuis le 1er décembre pour être sûr d'avoir du contenu
     const dateFin = new Date().toISOString().split('T')[0];
-    const dateDebut = "2025-12-01";
+    const dateDebut = "2025-12-05"; // On force le 5 décembre
 
     // User Request: Format YYYY-MM-DD (approx 'YYYY/MM/DD' requested but standard API is dashes)
     // Using YYYY-MM-DD to be standard-compliant while matching "Date format" requirement.

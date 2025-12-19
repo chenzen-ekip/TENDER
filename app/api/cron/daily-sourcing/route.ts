@@ -42,6 +42,7 @@ export async function GET(request: Request) {
             where: { active: true },
             include: { keywords: true, departments: true }
         });
+        console.log("Nombre de clients trouvés:", clients.length); // DEBUG CLIENTS
         console.log(`📋 [Cron] Found ${clients.length} clients, ${rawTenders.length} tenders.`);
 
         // Persist Candidates
