@@ -28,10 +28,10 @@ export async function GET(request: Request) {
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
         // --- STEP 1: Sourcing (Fetch & Persist Only) ---
-        // TEST MODE: Force 7 Days Lookback
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const lastDate = sevenDaysAgo; // Override DB state for test
+        // TEST MODE: Force 6 Days Lookback
+        const sixDaysAgo = new Date();
+        sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+        const lastDate = sixDaysAgo; // Override DB state for test
 
         // Fetch NEW tenders
         // Note: fetchRawTenders should ideally respect the short interval
