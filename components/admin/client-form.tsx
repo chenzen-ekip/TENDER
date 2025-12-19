@@ -1,0 +1,273 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { createClientAction } from "@/app/actions/client";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Loader2 } from "lucide-react";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { DEPARTMENTS } from "@/constants/departments";
+import { DESCRIPTORS } from "@/constants/descriptors";
+
+// Schema adapted for Frontend Form Management (Arrays)
+// We will convert to CSV strings when sending to Server Action if needed,
+// OR update this schema to match what we actually use in the form state
+const formSchema = z.object({
+    name: z.string().min(2, "Nom requis (min 2)"),
+    whatsapp: z.string().min(10, "Numéro valide requis"),
+    sector: z.string(),
+    certifications: z.string(),
+    keywords: z.array(z.string()).min(1, "Au moins 1 mot-clé requis"),
+    departments: z.array(z.string()).min(1, "Au moins 1 département requis"),
+    marketType: z.string(),
+    minBudget: z.coerce.number().default(0),
+    mustHaveCerts: z.string(),
+    forbiddenKeywords: z.string(),
+    minProfitability: z.coerce.number().default(10),
+});
+
+export function ClientForm() {
+    const [open, setOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
+
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: "",
+            whatsapp: "",
+            sector: "Nettoyage",
+            certifications: "",
+            keywords: [], // Initialized as empty array
+            departments: [], // Initialized as empty array
+            marketType: "Services",
+            minBudget: 0,
+            mustHaveCerts: "",
+            forbiddenKeywords: "",
+            minProfitability: 10,
+        },
+    });
+
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        startTransition(async () => {
+            const formData = new FormData();
+
+            // Standard fields
+            formData.append("name", values.name);
+            formData.append("whatsapp", values.whatsapp);
+            formData.append("sector", values.sector);
+            formData.append("certifications", values.certifications);
+            formData.append("marketType", values.marketType);
+            formData.append("minBudget", values.minBudget.toString());
+            formData.append("mustHaveCerts", values.mustHaveCerts);
+            formData.append("forbiddenKeywords", values.forbiddenKeywords);
+            formData.append("minProfitability", values.minProfitability.toString());
+
+            // Array fields -> Convert to CSV string for the Server Action
+            formData.append("keywords", values.keywords.join(","));
+            formData.append("departments", values.departments.join(","));
+
+            const result = await createClientAction({}, formData);
+
+            if (result.success) {
+                setOpen(false);
+                form.reset();
+            } else {
+                console.error(result.message);
+                alert(result.message);
+            }
+        });
+    }
+
+    // Transform options for MultiSelect
+    const deptOptions = DEPARTMENTS.map(d => ({ value: d.code, label: `${d.code} - ${d.name}` }));
+    // Descriptors are already in good format but allow searching by simple label
+    const keywordOptions = DESCRIPTORS.map(d => ({ value: d.value, label: d.label })); // value is the rigorous keyword
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Ajouter un Client
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Nouveau Client</DialogTitle>
+                    <DialogDescription>
+                        Configurez le client avec précision (Départements et Métiers BOAMP).
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+                        {/* Section 1: Client Info */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium border-b pb-2">Infos Client</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Nom de l'entreprise</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Acme Inc." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="whatsapp"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>WhatsApp (Format intl)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="+33612345678" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Section 2: Search Config */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium border-b pb-2">Ciblage Précis</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="keywords"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Métiers (Descripteurs BOAMP)</FormLabel>
+                                            <FormControl>
+                                                <MultiSelect
+                                                    options={keywordOptions}
+                                                    selected={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Rechercher un métier (ex: Peinture, Nettoyage...)"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="departments"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Zone Géographique</FormLabel>
+                                            <FormControl>
+                                                <MultiSelect
+                                                    options={deptOptions}
+                                                    selected={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Rechercher un département (ex: 75, Nord...)"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="minBudget"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Budget Min (€)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} value={field.value as string | number} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="sector"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Secteur (Info)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="BTP" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Section 3: AI Rules */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium border-b pb-2">Règles Sniper (IA)</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="forbiddenKeywords"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mots-clés Interdits</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="travaux, construction" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="minProfitability"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Rentabilité Min (%)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} value={field.value as string | number} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit" disabled={isPending}>
+                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Créer le Client
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}

@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User (Admin) - The Sniper Master
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Client - PME
+model Client {
+  id             String   @id @default(uuid())
+  name           String
+  whatsapp_phone String?
+  sector         String?
+  certifications String?  // Keep simple string for now or upgrade later
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // "Pro" Architecture: Relations instead of CSV strings
+  keywords       ClientKeyword[]
+  departments    ClientDepartment[]
+
+  searchConfig   SearchConfig?
+  sniperRules    SniperRules?
+  opportunities  Opportunity[]
+}
+
+// Relation table for Keywords (simulating String[] on SQLite)
+model ClientKeyword {
+  id       String @id @default(uuid())
+  word     String
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// Relation table for Departments/Regions (simulating String[] on SQLite)
+model ClientDepartment {
+  id       String @id @default(uuid())
+  code     String // e.g. "75", "92"
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// SearchConfig - Parameters for API PISTE/BOAMP
+// Deprecated CSV fields removed in favor of direct relations on Client
+model SearchConfig {
+  id          String   @id @default(uuid())
+  // keywords/departments moved to Client relations
+  marketType  String?   // e.g. "Services", "Travaux"
+  minBudget   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clientId    String   @unique
+  client      Client   @relation(fields: [clientId], references: [id])
+}
+
+// SniperRules - AI filtering criteria
+model SniperRules {
+  id                     String   @id @default(uuid())
+  mustHaveCertifications String?   // Comma-separated string
+  forbiddenKeywords      String?   // Comma-separated string
+  minProfitability       Int?     // Percentage
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  clientId               String   @unique
+  client                 Client   @relation(fields: [clientId], references: [id])
+}
+
+// Tender - Raw tenders from API
+model Tender {
+  id        String   @id @default(uuid())
+  id_boamp  String   @unique // External ID
+  title     String
+  summary   String
+  pdf_url   String?
+  status    String   // e.g., EXTRACTED, PROCESSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  opportunities Opportunity[]
+}
+
+// Opportunity - Match between Client and Tender
+model Opportunity {
+  id          String            @id @default(uuid())
+  ai_analysis String            // Generated summary/analysis
+  match_score Int               // 0-100
+  status      String            @default("PENDING") // Enum removed for SQLite
+  dume_data   String?           // Future use (Stored as JSON string)
+  decision_token String?        @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  tenderId    String
+  tender      Tender   @relation(fields: [tenderId], references: [id])
+
+  @@unique([clientId, tenderId])
+}
+
+// System State - For Incremental Sourcing
+model SystemState {
+  id            String   @id @default("global_config")
+  lastCheckDate DateTime @default(now())
+}
