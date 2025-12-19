@@ -3,9 +3,6 @@
 import * as React from "react"
 import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Command, CommandGroup, CommandItem, CommandList } from "cmdk" // Assuming typical shadcn setup, but if not installed I'll use a simpler fallback. 
-// WAIT, I saw no 'command.tsx' in the list. I should NOT assume 'cmdk' is installed.
-// I will rewrite this to be pure React/Taiwind without external 'cmdk' dependency to be safe.
 
 interface Option {
     value: string

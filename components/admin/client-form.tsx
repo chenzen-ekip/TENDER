@@ -29,20 +29,19 @@ import { DEPARTMENTS } from "@/constants/departments";
 import { DESCRIPTORS } from "@/constants/descriptors";
 
 // Schema adapted for Frontend Form Management (Arrays)
-// We will convert to CSV strings when sending to Server Action if needed,
-// OR update this schema to match what we actually use in the form state
+// Schema adapted for Frontend Form Management (Arrays)
 const formSchema = z.object({
     name: z.string().min(2, "Nom requis (min 2)"),
     whatsapp: z.string().min(10, "Numéro valide requis"),
-    sector: z.string(),
-    certifications: z.string(),
+    sector: z.string().min(1, "Secteur requis"),
+    certifications: z.string().optional(),
     keywords: z.array(z.string()).min(1, "Au moins 1 mot-clé requis"),
     departments: z.array(z.string()).min(1, "Au moins 1 département requis"),
     marketType: z.string(),
-    minBudget: z.coerce.number().default(0),
-    mustHaveCerts: z.string(),
-    forbiddenKeywords: z.string(),
-    minProfitability: z.coerce.number().default(10),
+    minBudget: z.coerce.number(),
+    mustHaveCerts: z.string().optional(),
+    forbiddenKeywords: z.string().optional(),
+    minProfitability: z.coerce.number(),
 });
 
 export function ClientForm() {
@@ -50,14 +49,14 @@ export function ClientForm() {
     const [isPending, startTransition] = useTransition();
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: "",
             whatsapp: "",
             sector: "Nettoyage",
             certifications: "",
-            keywords: [], // Initialized as empty array
-            departments: [], // Initialized as empty array
+            keywords: [],
+            departments: [],
             marketType: "Services",
             minBudget: 0,
             mustHaveCerts: "",
@@ -74,11 +73,11 @@ export function ClientForm() {
             formData.append("name", values.name);
             formData.append("whatsapp", values.whatsapp);
             formData.append("sector", values.sector);
-            formData.append("certifications", values.certifications);
+            formData.append("certifications", values.certifications || "");
             formData.append("marketType", values.marketType);
             formData.append("minBudget", values.minBudget.toString());
-            formData.append("mustHaveCerts", values.mustHaveCerts);
-            formData.append("forbiddenKeywords", values.forbiddenKeywords);
+            formData.append("mustHaveCerts", values.mustHaveCerts || "");
+            formData.append("forbiddenKeywords", values.forbiddenKeywords || "");
             formData.append("minProfitability", values.minProfitability.toString());
 
             // Array fields -> Convert to CSV string for the Server Action
