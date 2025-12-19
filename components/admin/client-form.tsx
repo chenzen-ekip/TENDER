@@ -32,7 +32,7 @@ import { DESCRIPTORS } from "@/constants/descriptors";
 // Schema adapted for Frontend Form Management (Arrays)
 const formSchema = z.object({
     name: z.string().min(2, "Nom requis (min 2)"),
-    whatsapp: z.string().min(10, "Numéro valide requis"),
+    email: z.string().email("Email valide requis"),
     sector: z.string().min(1, "Secteur requis"),
     certifications: z.string().optional(),
     keywords: z.array(z.string()).min(1, "Au moins 1 mot-clé requis"),
@@ -58,7 +58,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
     // Default values logic
     const defaultValues = isEdit ? {
         name: initialData.name,
-        whatsapp: initialData.whatsapp_phone || "",
+        email: initialData.email || "",
         sector: initialData.sector || "",
         certifications: initialData.certifications || "",
         keywords: initialData.keywords.map((k: any) => k.word),
@@ -70,7 +70,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         minProfitability: initialData.sniperRules?.minProfitability || 10,
     } : {
         name: "",
-        whatsapp: "",
+        email: "",
         sector: "Nettoyage",
         certifications: "",
         keywords: [],
@@ -96,7 +96,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
 
             // Standard fields
             formData.append("name", values.name);
-            formData.append("whatsapp", values.whatsapp);
+            formData.append("email", values.email);
             formData.append("sector", values.sector);
             formData.append("certifications", values.certifications || "");
             formData.append("marketType", values.marketType);
@@ -171,12 +171,12 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="whatsapp"
+                                    name="email"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>WhatsApp (Format intl)</FormLabel>
+                                            <FormLabel>Adresse Email</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="+33612345678" {...field} />
+                                                <Input placeholder="contact@acme.com" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

@@ -1,34 +1,19 @@
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
-
+import { Resend } from 'resend';
 import { generateOpportunityPdf } from "./pdf.service";
-import nodemailer from "nodemailer";
-import path from "path";
 
 // --- Configuration ---
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-// Email Config
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587");
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-
-const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-    },
-});
+const resend = new Resend(RESEND_API_KEY);
 
 /**
- * Sends an Email alert to the client for a specific opportunity.
+ * Sends an Email alert to the client for a specific opportunity using Resend.
  * 1. Generates decision token & links.
  * 2. Generates PDF dossier.
- * 3. Sends HTML Email with PDF attachment.
+ * 3. Sends HTML Email with PDF attachment via Resend.
  */
 export async function sendOpportunityAlert(opportunityId: string) {
     console.log(`🔔 [Notifier] Processing Alert for Opportunity: ${opportunityId}`);
@@ -47,6 +32,13 @@ export async function sendOpportunityAlert(opportunityId: string) {
         return;
     }
 
+    const clientEmail = opportunity.client.email;
+
+    if (!clientEmail) {
+        console.error(`❌ [Notifier] No email found for client ${opportunity.client.name}`);
+        return;
+    }
+
     // 2. Generate Token & Links (or reuse existing)
     let token = opportunity.decision_token;
 
@@ -56,8 +48,6 @@ export async function sendOpportunityAlert(opportunityId: string) {
             where: { id: opportunityId },
             data: { decision_token: token },
         });
-    } else {
-        console.log(`ℹ️ [Notifier] Opportunity ${opportunityId} already has a token. Re-sending/Simulating alert.`);
     }
 
     const acceptLink = `${BASE_URL}/api/decision?id=${opportunity.id}&decision=APPROVED`;
@@ -107,46 +97,40 @@ export async function sendOpportunityAlert(opportunityId: string) {
     </div>
     `;
 
-    // 5. Send Email
-    if (EMAIL_USER && EMAIL_PASS) {
-        try {
-            // Check if email is configured
-            // DEMO MODE: Send to self (EMAIL_USER) to ensure receipt
-            const toEmail = process.env.EMAIL_USER;
+    // 5. Send Email via Resend
+    if (!RESEND_API_KEY) {
+        console.warn("⚠️ [Notifier] RESEND_API_KEY missing. Skipping actual send.");
+        return { success: false, error: "Missing API Key" };
+    }
 
-            const attachments: any[] = [];
-            if (pdfBuffer) {
-                attachments.push({
-                    filename: `Dossier_Tender_${opportunity.tender.id_boamp}.pdf`,
-                    content: pdfBuffer,
-                    contentType: 'application/pdf'
-                });
-                console.log(`📄 [Notifier] Attaching PDF (Buffer size: ${pdfBuffer.length} bytes)`);
-            }
-
-            const mailOptions: any = {
-                from: `"TENDER - IA" <${EMAIL_USER}>`,
-                to: toEmail,
-                subject: `📢 Opportunité : ${opportunity.tender.title}`,
-                html: htmlContent,
-                attachments: attachments
-            };
-
-            await transporter.sendMail(mailOptions);
-            console.log(`✅ [Notifier] Email sent to ${toEmail}`);
-        } catch (error) {
-            console.error("❌ [Notifier] Email Error:", error);
-            console.error("Make sure EMAIL_USER/EMAIL_PASS are set in .env");
+    try {
+        const attachments: any[] = [];
+        if (pdfBuffer) {
+            attachments.push({
+                filename: `Dossier_Tender_${opportunity.tender.id_boamp}.pdf`,
+                content: pdfBuffer,
+            });
+            console.log(`📄 [Notifier] Attaching PDF (${pdfBuffer.length} bytes)`);
         }
-    } else {
-        // Dev Mode Fallback
-        console.log("📨 [MOCK EMAIL] Nodemailer not configured. Logging details:");
-        console.log("---------------------------------------------------");
-        console.log(`Subject: 📢 Opportunité : ${opportunity.tender.title}`);
-        console.log("PDF Generated:", pdfBuffer ? `YES (${pdfBuffer.length} bytes)` : "NO");
-        console.log("Valid Link:", acceptLink);
-        console.log("Reject Link:", rejectLink);
-        console.log("---------------------------------------------------");
-        return { success: true, mock: true };
+
+        const data = await resend.emails.send({
+            from: 'TENDER AI <onboarding@resend.dev>', // Update with verified domain if available
+            to: clientEmail,
+            subject: `📢 Opportunité : ${opportunity.tender.title}`,
+            html: htmlContent,
+            attachments: attachments
+        });
+
+        if (data.error) {
+            console.error("❌ [Notifier] Resend API Error:", data.error);
+            throw new Error(data.error.message);
+        }
+
+        console.log(`✅ [Notifier] Email sent to ${clientEmail} (ID: ${data.data?.id})`);
+        return { success: true, messageId: data.data?.id };
+
+    } catch (error) {
+        console.error("❌ [Notifier] CRITICAL Email Error:", error);
+        throw error;
     }
 }

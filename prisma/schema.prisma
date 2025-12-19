@@ -23,7 +23,7 @@ model User {
 model Client {
   id             String   @id @default(uuid())
   name           String
-  whatsapp_phone String?
+  email          String?  // New email field replacing whatsapp
   sector         String?
   certifications String?  // Keep simple string for now or upgrade later
   active         Boolean  @default(true)

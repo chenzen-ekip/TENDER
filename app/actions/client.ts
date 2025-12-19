@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 const ClientFormSchema = z.object({
     // Client Info
     name: z.string().min(2, "Le nom doit faire au moins 2 caractères."),
-    whatsapp: z.string().min(10, "Numéro valide requis."),
+    email: z.string().email("Email valide requis."),
     sector: z.string().min(2),
     certifications: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)), // Comma separated string -> array
 
@@ -59,7 +59,7 @@ export async function createClientAction(prevState: ClientFormState, formData: F
             const client = await tx.client.create({
                 data: {
                     name: data.name,
-                    whatsapp_phone: data.whatsapp,
+                    email: data.email,
                     sector: data.sector,
                     certifications: data.certifications.join(", "),
                     // Create related records (Pro Architecture)
@@ -129,7 +129,7 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
                 where: { id: clientId },
                 data: {
                     name: data.name,
-                    whatsapp_phone: data.whatsapp,
+                    email: data.email,
                     sector: data.sector,
                     certifications: data.certifications.join(", "),
                 },

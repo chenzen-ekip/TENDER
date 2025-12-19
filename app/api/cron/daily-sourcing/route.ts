@@ -106,13 +106,13 @@ export async function GET(request: Request) {
                     try {
                         // Check phone availability explicitly or rely on service
                         // We rely on service but log extensively here
-                        if (opp.client?.whatsapp_phone) {
-                            console.log(`📲 [Cron] Sending WhatsApp for Opp ${opp.id}...`);
+                        if (opp.client?.email) {
+                            console.log(`📧 [Cron] Sending Email for Opp ${opp.id}...`);
                             await sendOpportunityAlert(opp.id);
-                            console.log(`✅ [Cron] WhatsApp SENT for Opp ${opp.id}`);
+                            console.log(`✅ [Cron] Email SENT for Opp ${opp.id}`);
                             stats.notifications++;
                         } else {
-                            console.log(`⚠️ [Cron] No WhatsApp phone for Client ${opp.client?.name}, skipping alert.`);
+                            console.log(`⚠️ [Cron] No Email for Client ${opp.client?.name}, skipping alert.`);
                         }
                     } catch (notifyError) {
                         console.error(`❌ [Cron] Notification FAILED for Opp ${opp.id}:`, notifyError);

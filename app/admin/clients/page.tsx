@@ -56,7 +56,7 @@ export default async function AdminClientsPage() {
                                 <TableRow key={client.id}>
                                     <TableCell className="font-medium">
                                         {client.name}
-                                        <div className="text-xs text-muted-foreground">{client.whatsapp_phone}</div>
+                                        <div className="text-xs text-muted-foreground">{client.email}</div>
                                     </TableCell>
                                     <TableCell>{client.sector}</TableCell>
                                     <TableCell>
