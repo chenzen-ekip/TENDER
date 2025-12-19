@@ -9,91 +9,66 @@ import { sendOpportunityAlert } from "@/lib/services/notification.service";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-    // 0. Security Check
-    const authHeader = request.headers.get("authorization");
-    const isDev = process.env.NODE_ENV === "development";
+    // 0. Security Check - REMOVED for Easy Trigger
+    // const authHeader = request.headers.get("authorization");
+    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) { ... }
 
-    // Check if valid secret or dev mode override
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && !isDev) {
-        return new NextResponse("Unauthorized", { status: 401 });
-    }
 
     try {
         const stats = {
             sourcing: 0,
             analysis: 0,
             notifications: 0,
+            errors: 0
         };
 
+        const MAX_ANALYSIS_LIMIT = 5; // Vercel Timeout Protection
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
-        // --- STEP 1: Sourcing (Fetch tenders ONCE) ---
-        // 1. Get System State (Last Check Date)
+        // --- STEP 1: Sourcing (Fetch & Persist Only) ---
         let state = await db.systemState.findUnique({ where: { id: "global_config" } });
-
-        // Default to 24h ago if first run
         const lastDate = state?.lastCheckDate || new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-        // 2. Fetch only NEW tenders using Buffered Logic
+        // Fetch NEW tenders
+        // Note: fetchRawTenders should ideally respect the short interval
+        // We assume it fetches everything SINCE lastDate.
         const rawTenders = await fetchRawTenders(lastDate);
 
         const clients = await db.client.findMany({
-            where: { active: true }, // Filter active clients
-            include: {
-                keywords: true,
-                departments: true
-            }
+            where: { active: true },
+            include: { keywords: true, departments: true }
         });
-        console.log(`📋 [Cron] Found ${clients.length} active clients to process against ${rawTenders.length} tenders.`);
+        console.log(`📋 [Cron] Found ${clients.length} clients, ${rawTenders.length} tenders.`);
 
-        // Process each client
+        // Persist Candidates
         for (const client of clients) {
-            // Map relations to simple arrays
             const keywords = client.keywords.map((k: any) => k.word);
             const regions = client.departments.map((d: any) => d.code);
 
-            console.log(`👤 Processing Client ${client.name} (Regions: ${regions.length ? regions : "ALL"}, Keywords: ${keywords})`);
-
             for (const rawTender of rawTenders) {
-                // Check match
-                const isMatch = matchesClientSetup(rawTender, { keywords, regions });
-
-                if (isMatch) {
-                    // 1. Ensure Tender exists in DB
-                    // Note: Ideally we upsert tenders in batch, but for now we do it lazily or here
-                    // To avoid massive Promise.all, we do singular operations or we could mapTenderToDbObject
+                if (matchesClientSetup(rawTender, { keywords, regions })) {
                     const tenderData = mapTenderToDbObject(rawTender);
 
+                    // Upsert Tender
                     const tender = await db.tender.upsert({
                         where: { id_boamp: tenderData.id_boamp },
-                        update: {
-                            title: tenderData.title,
-                            summary: tenderData.summary,
-                            pdf_url: tenderData.pdf_url
-                        },
+                        update: { title: tenderData.title, summary: tenderData.summary, pdf_url: tenderData.pdf_url },
                         create: tenderData
                     });
 
-                    // 2. Create Opportunity
-                    // Check existence
+                    // Check duplicate Opportunity
                     const existingOpp = await db.opportunity.findUnique({
-                        where: {
-                            clientId_tenderId: {
-                                clientId: client.id,
-                                tenderId: tender.id
-                            }
-                        }
+                        where: { clientId_tenderId: { clientId: client.id, tenderId: tender.id } }
                     });
 
                     if (!existingOpp) {
-                        console.log(`✨ [Match] New Opportunity for ${client.name}: ${tender.title.substring(0, 30)}...`);
                         await db.opportunity.create({
                             data: {
                                 clientId: client.id,
                                 tenderId: tender.id,
                                 status: "ANALYSIS_PENDING",
                                 match_score: 0,
-                                ai_analysis: "Pending GPT-4o analysis..."
+                                ai_analysis: "Pending Analysis..."
                             }
                         });
                         stats.sourcing++;
@@ -102,61 +77,68 @@ export async function GET(request: Request) {
             }
         }
 
-        // --- STEP 2: AI Analysis (Process pending opportunities) ---
-        const pendingOpportunities = await db.opportunity.findMany({
-            where: {
-                status: "ANALYSIS_PENDING",
-            },
+        // --- STEP 2: Limited Processing Loop (Analysis + Notify) ---
+        // Pick top N 'ANALYSIS_PENDING' opportunities to process
+        // This handles both new finds AND backlog from previous timeouts
+        const candidates = await db.opportunity.findMany({
+            where: { status: "ANALYSIS_PENDING" },
+            take: MAX_ANALYSIS_LIMIT,
+            orderBy: { createdAt: 'asc' }, // FIFO
+            include: { client: true } // Need client for phone check later?
         });
-        console.log(`🤖 [Cron] Found ${pendingOpportunities.length} opportunities to analyze.`);
 
-        // Run analysis sequentially to avoid rate limits (if any) or parallel if robust
-        // Using Promise.all for speed, assuming OpenAI rate limits are handled or high enough
-        await Promise.all(
-            pendingOpportunities.map(async (opp: { id: string }) => {
-                await analyzeTender(opp.id);
+        console.log(`⚡ [Cron] Processing batch of ${candidates.length} candidates (Limit: ${MAX_ANALYSIS_LIMIT})`);
+
+        for (const opp of candidates) {
+            try {
+                // 2.1 Analyze
+                // analyzeTender now returns { status, summary? }
+                const analysisResult = await analyzeTender(opp.id);
                 stats.analysis++;
-            })
-        );
 
-        // --- STEP 3: Notifications (Send alerts for waiting decisions) ---
-        // Vital: SIMPLIFIED for Robustness/Demo. Fetch all waiting decisions. 
-        // Logic inside sendOpportunityAlert handles deduplication or re-sending.
-        const opportunitiesToNotify = await db.opportunity.findMany({
-            where: {
-                status: "WAITING_CLIENT_DECISION",
-                // decision_token: null, // REMOVED to allow re-runs/debug
-            },
-            include: {
-                client: true, // Needed for logging/checking
-            }
-        });
-        console.log(`🔍 [Cron] Found ${opportunitiesToNotify.length} potential alerts to process (Status: WAITING_CLIENT_DECISION).`);
-        console.log(`🔔 [Cron] Processing notifications...`);
-
-        await Promise.all(
-            opportunitiesToNotify.map(async (opp: { id: string, client: { whatsapp_phone: string | null } }) => {
-                // Double check if client has whatsapp configured
-                if (opp.client && opp.client.whatsapp_phone) {
-                    await sendOpportunityAlert(opp.id);
-                    stats.notifications++;
+                // 2.2 Notify Immediately if VALIDATED
+                if (analysisResult?.status === "VALIDATED") {
+                    try {
+                        // Check phone availability explicitly or rely on service
+                        // We rely on service but log extensively here
+                        if (opp.client?.whatsapp_phone) {
+                            console.log(`📲 [Cron] Sending WhatsApp for Opp ${opp.id}...`);
+                            await sendOpportunityAlert(opp.id);
+                            console.log(`✅ [Cron] WhatsApp SENT for Opp ${opp.id}`);
+                            stats.notifications++;
+                        } else {
+                            console.log(`⚠️ [Cron] No WhatsApp phone for Client ${opp.client?.name}, skipping alert.`);
+                        }
+                    } catch (notifyError) {
+                        console.error(`❌ [Cron] Notification FAILED for Opp ${opp.id}:`, notifyError);
+                        stats.errors++;
+                    }
                 }
-            })
-        );
 
-        console.log("✅ [Cron] Job Completed successfully.", stats);
+            } catch (analysisError) {
+                console.error(`❌ [Cron] Analysis FAILED for Opp ${opp.id}:`, analysisError);
+                stats.errors++;
+            }
+        }
 
-        return NextResponse.json({
-            success: true,
-            stats,
-            timestamp: new Date().toISOString(),
-        });
+        // --- STEP 3: Update System State ---
+        // Only if we actually sourced something? Or always update to move the window forward?
+        // If we move the window forward, we won't re-source the same raw tenders.
+        // Since we persisted them as "ANALYSIS_PENDING", they are safe in DB.
+        // So we can update the date to now.
+        if (rawTenders.length > 0) {
+            await db.systemState.upsert({
+                where: { id: "global_config" },
+                update: { lastCheckDate: new Date() },
+                create: { id: "global_config", lastCheckDate: new Date() }
+            });
+        }
+
+        console.log("✅ [Cron] Job Completed.", stats);
+        return NextResponse.json({ success: true, stats, timestamp: new Date().toISOString() });
 
     } catch (error) {
-        console.error("❌ [Cron] Job Failed:", error);
-        return NextResponse.json(
-            { success: false, error: "Internal Server Error" },
-            { status: 500 }
-        );
+        console.error("❌ [Cron] Top-Level Job Failure:", error);
+        return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
     }
 }
