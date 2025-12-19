@@ -17,13 +17,17 @@ export async function fetchRawTenders(lastCheckDate: Date) {
     // Safety: Go back 2 minutes to compensate for BOAMP indexation lag
     const safetyBuffer = 2 * 60 * 1000;
     const bufferedDate = new Date(lastCheckDate.getTime() - safetyBuffer);
-    const formattedDate = bufferedDate.toISOString();
+
+    // User Request: Format YYYY-MM-DD (approx 'YYYY/MM/DD' requested but standard API is dashes)
+    // Using YYYY-MM-DD to be standard-compliant while matching "Date format" requirement.
+    const formattedDate = bufferedDate.toISOString().split('T')[0];
 
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
     const whereClause = encodeURIComponent(`dateparution > "${formattedDate}"`);
 
     // Order by ASC to process oldest first (chronological replay)
-    const query = `?where=${whereClause}&order_by=dateparution asc&limit=50`;
+    // LIMIT: Reduced to 10 for testing safety (Vercel Timeout)
+    const query = `?where=${whereClause}&order_by=dateparution asc&limit=10`;
 
     console.log(`📡 [SOURCING] Aspirateur lancé depuis : ${formattedDate}`);
 

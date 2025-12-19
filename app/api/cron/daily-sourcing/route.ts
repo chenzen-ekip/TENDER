@@ -28,8 +28,10 @@ export async function GET(request: Request) {
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
         // --- STEP 1: Sourcing (Fetch & Persist Only) ---
-        let state = await db.systemState.findUnique({ where: { id: "global_config" } });
-        const lastDate = state?.lastCheckDate || new Date(Date.now() - 24 * 60 * 60 * 1000);
+        // TEST MODE: Force 7 Days Lookback
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const lastDate = sevenDaysAgo; // Override DB state for test
 
         // Fetch NEW tenders
         // Note: fetchRawTenders should ideally respect the short interval
