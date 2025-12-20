@@ -267,7 +267,13 @@ export async function sendAdminDceRequestAlert(opportunityId: string) {
         return;
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL || GMAIL_USER; // Fallback to sender if no pending email configured
+    const adminEmail = process.env.ADMIN_EMAIL || GMAIL_USER; // Fallback to sender if no admin email configured
+
+    if (!adminEmail) {
+        console.warn("⚠️ [Notifier] No ADMIN_EMAIL configured. Skipping admin notification.");
+        return;
+    }
+
     const boampLink = opportunity.tender.pdf_url || `https://www.boamp.fr/pages/avis/?q=idweb:${opportunity.tender.id_boamp}`;
 
     // Direct link to the Admin Upload Page (To be created)
