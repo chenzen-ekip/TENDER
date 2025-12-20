@@ -54,7 +54,10 @@ export function OpportunityActions({ opportunityId, hasDce, hasAnalysis, analysi
         try {
             const result = await generateDocsAction(opportunityId);
             if (result.success && result.paths) {
-                setDraftLinks(result.paths);
+                setDraftLinks({
+                    letter: result.paths.letterPath,
+                    memory: result.paths.memoryPath
+                });
                 setStatus("Documents prêts !");
             }
         } catch (e) {
