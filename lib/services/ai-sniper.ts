@@ -67,10 +67,10 @@ export async function analyzeTender(opportunityId: string) {
     TA MISSION:
     Tu dois valider (VALIDATED) tout marché qui matche les mots-clés métier du client.
     
-    ⚠️ MODE DÉMO ACTIVÉ : SEUIL DE VALIDATION BAISSÉ À 3/10.
-    Même si la pertinence est faible ou moyenne, VALIDE LE MARCHÉ.
-    Refuse uniquement si c'est du bruit total (ex: carburant, fournitures de bureau).
-    On préfère un faux positif qu'un raté pour cette démo.
+    ⚠️ MODE DÉMO ACTIVÉ : SEUIL DE VALIDATION AJUSTÉ À 5/10.
+    Si la pertinence est MOYENNE ou FORTE (>= 5/10), VALIDE LE MARCHÉ.
+    Refuse si c'est faible (< 5/10) ou du bruit total.
+    On cherche le juste milieu : pas trop de bruit, mais pas de ratés évidents.
     
     FORMAT JSON STRICT ATTENDU:
     Réponds uniquement avec un objet JSON valide, sans markdown, sans texte autour.

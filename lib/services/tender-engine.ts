@@ -17,13 +17,13 @@ export async function fetchRawTenders(lastCheckDate: Date) {
     // Safety: Go back 2 minutes to compensate for BOAMP indexation lag
     const safetyBuffer = 2 * 60 * 1000;
 
-    // On force la recherche depuis le 1er décembre pour être sûr d'avoir du contenu
-    const dateFin = new Date().toISOString().split('T')[0];
-    const dateDebut = "2025-12-05"; // On force le 5 décembre
+    // Dynamic Date: Today - 4 days (User Request for "Live" feel)
+    const date = new Date();
+    date.setDate(date.getDate() - 4);
+    const dateDebut = date.toISOString().split('T')[0];
 
-    // User Request: Format YYYY-MM-DD (approx 'YYYY/MM/DD' requested but standard API is dashes)
-    // Using YYYY-MM-DD to be standard-compliant while matching "Date format" requirement.
-    const formattedDate = dateDebut; // Force usage of dateDebut
+    // User Request: Format YYYY-MM-DD
+    const formattedDate = dateDebut; // Force usage of dynamic date
 
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
     const whereClause = encodeURIComponent(`dateparution > "${formattedDate}"`);
