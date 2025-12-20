@@ -55,6 +55,7 @@ export default async function DecisionPage({ params }: PageProps) {
         return notFound();
     }
 
+
     // 3. Update DB & Invalidate Token
     await db.opportunity.update({
         where: { id: opportunity.id },
@@ -66,14 +67,12 @@ export default async function DecisionPage({ params }: PageProps) {
 
     // 4. If client ACCEPTED, notify admin for DCE request (Concierge Mode)
     if (choice === "accept") {
-        try {
-            await sendAdminDceRequestAlert(opportunity.id);
-            console.log(`✅ [Decision] Admin notified for DCE request: ${opportunity.id}`);
-        } catch (error) {
+        // Fire and forget - don't block user experience if notification fails
+        sendAdminDceRequestAlert(opportunity.id).catch((error) => {
             console.error(`❌ [Decision] Failed to notify admin:`, error);
-            // Don't block the user flow if notification fails
-        }
+        });
     }
+
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
