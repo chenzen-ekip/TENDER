@@ -61,10 +61,9 @@ export async function sendOpportunityAlert(opportunityId: string) {
         });
     }
 
-    // Link to the "Response Copilot" Landing Page
-    const acceptLink = `${BASE_URL}/opportunities/${opportunity.id}`;
-    // Reject link keeps using the API for quick action
-    const rejectLink = `${BASE_URL}/api/decision?id=${opportunity.id}&decision=REJECTED`;
+    // Link to accept/reject decision pages (triggers admin notification)
+    const acceptLink = `${BASE_URL}/decision/${token}/accept`;
+    const rejectLink = `${BASE_URL}/decision/${token}/reject`;
 
     // 3. (Pivot) PDF Generation Removed
     // The email body is now the "Product". Direct link to BOAMP is provided.
