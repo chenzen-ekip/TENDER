@@ -189,3 +189,22 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
         return { success: false, message: "Erreur serveur lors de la mise à jour." };
     }
 }
+// ... existing code ...
+
+/**
+ * Server Action to delete a client.
+ */
+export async function deleteClientAction(clientId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        await db.client.delete({
+            where: { id: clientId },
+        });
+
+        revalidatePath("/admin/clients");
+        revalidatePath("/");
+        return { success: true, message: "Client supprimé." };
+    } catch (error) {
+        console.error("Failed to delete client:", error);
+        return { success: false, message: "Erreur lors de la suppression." };
+    }
+}

@@ -1,5 +1,7 @@
+
 import { db } from "@/lib/db";
 import { ClientForm } from "@/components/admin/client-form";
+import { ClientActions } from "@/components/admin/client-actions";
 import {
     Table,
     TableBody,
@@ -91,9 +93,7 @@ export default async function AdminClientsPage() {
                                         <Badge variant="secondary">{client._count.opportunities}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <ClientForm initialData={client}>
-                                            <Button variant="ghost" size="sm">Gérer</Button>
-                                        </ClientForm>
+                                        <ClientActions client={client} />
                                     </TableCell>
                                 </TableRow>
                             ))

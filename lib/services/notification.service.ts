@@ -1,19 +1,30 @@
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
-import { Resend } from 'resend';
+import nodemailer from "nodemailer";
 import { generateOpportunityPdf } from "./pdf.service";
 
 // --- Configuration ---
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-const resend = new Resend(RESEND_API_KEY);
+// Gmail SMTP Config
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // true for 465, false for other ports
+    auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+    },
+});
 
 /**
- * Sends an Email alert to the client for a specific opportunity using Resend.
+ * Sends an Email alert to the client for a specific opportunity using Gmail SMTP.
  * 1. Generates decision token & links.
  * 2. Generates PDF dossier.
- * 3. Sends HTML Email with PDF attachment via Resend.
+ * 3. Sends HTML Email with PDF attachment via Nodemailer.
  */
 export async function sendOpportunityAlert(opportunityId: string) {
     console.log(`🔔 [Notifier] Processing Alert for Opportunity: ${opportunityId}`);
@@ -97,10 +108,10 @@ export async function sendOpportunityAlert(opportunityId: string) {
     </div>
     `;
 
-    // 5. Send Email via Resend
-    if (!RESEND_API_KEY) {
-        console.warn("⚠️ [Notifier] RESEND_API_KEY missing. Skipping actual send.");
-        return { success: false, error: "Missing API Key" };
+    // 5. Send Email via Nodemailer
+    if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+        console.warn("⚠️ [Notifier] GMAIL credentials missing. Skipping actual send.");
+        return { success: false, error: "Missing Gmail Config" };
     }
 
     try {
@@ -109,28 +120,24 @@ export async function sendOpportunityAlert(opportunityId: string) {
             attachments.push({
                 filename: `Dossier_Tender_${opportunity.tender.id_boamp}.pdf`,
                 content: pdfBuffer,
+                contentType: 'application/pdf'
             });
             console.log(`📄 [Notifier] Attaching PDF (${pdfBuffer.length} bytes)`);
         }
 
-        const data = await resend.emails.send({
-            from: 'TENDER AI <onboarding@resend.dev>', // Update with verified domain if available
-            to: clientEmail,
-            subject: `📢 Opportunité : ${opportunity.tender.title}`,
-            html: htmlContent,
+        const info = await transporter.sendMail({
+            from: `"Antigravity Tender" <${GMAIL_USER}>`, // Sender address
+            to: clientEmail, // Dynamic Client Email
+            subject: `📢 Opportunité : ${opportunity.tender.title}`, // Subject line
+            html: htmlContent, // HTML body
             attachments: attachments
         });
 
-        if (data.error) {
-            console.error("❌ [Notifier] Resend API Error:", data.error);
-            throw new Error(data.error.message);
-        }
-
-        console.log(`✅ [Notifier] Email sent to ${clientEmail} (ID: ${data.data?.id})`);
-        return { success: true, messageId: data.data?.id };
+        console.log(`✅ [Notifier] Email sent to ${clientEmail} (MsgID: ${info.messageId})`);
+        return { success: true, messageId: info.messageId };
 
     } catch (error) {
-        console.error("❌ [Notifier] CRITICAL Email Error:", error);
+        console.error("❌ [Notifier] Gmail SMTP Error:", error);
         throw error;
     }
 }
