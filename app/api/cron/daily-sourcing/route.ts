@@ -33,17 +33,29 @@ export async function GET(request: Request) {
         fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
         const lastDate = fourDaysAgo;
 
-        // Fetch NEW tenders
-        // Note: fetchRawTenders should ideally respect the short interval
-        // We assume it fetches everything SINCE lastDate.
-        const rawTenders = await fetchRawTenders(lastDate);
-
+        // First, fetch active clients with their filters
         const clients = await db.client.findMany({
             where: { active: true },
             include: { keywords: true, departments: true }
         });
         console.log("Nombre de clients trouvés:", clients.length); // DEBUG CLIENTS
-        console.log(`📋 [Cron] Found ${clients.length} clients, ${rawTenders.length} tenders.`);
+
+        // Collect ALL unique departments and keywords from ALL clients
+        const allDepartments = [...new Set(
+            clients.flatMap(c => c.departments.map((d: any) => d.code))
+        )];
+
+        const allKeywords = [...new Set(
+            clients.flatMap(c => c.keywords.map((k: any) => k.word))
+        )];
+
+        console.log(`📍 [Cron] Départements de tous les clients: ${allDepartments.join(', ')}`);
+        console.log(`🔑 [Cron] ${allKeywords.length} mots-clés uniques collectés`);
+        console.log(`📋 [Cron] Found ${clients.length} clients`);
+
+        // Fetch NEW tenders with department AND keyword filtering
+        const rawTenders = await fetchRawTenders(lastDate, allDepartments, allKeywords);
+        console.log(`📦 [Cron] ${rawTenders.length} tenders fetched from BOAMP`);
 
         // Persist Candidates
         for (const client of clients) {

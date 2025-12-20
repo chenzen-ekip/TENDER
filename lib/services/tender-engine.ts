@@ -13,26 +13,25 @@ import { getPisteToken } from "./piste-auth.service";
  * Fetches tenders since the last check date with a safety buffer.
  * This should be called ONCE per Cron cycle.
  */
-export async function fetchRawTenders(lastCheckDate: Date) {
-    // Safety: Go back 2 minutes to compensate for BOAMP indexation lag
-    const safetyBuffer = 2 * 60 * 1000;
-
+export async function fetchRawTenders(lastCheckDate: Date, clientDepartments: string[] = [], clientKeywords: string[] = []) {
     // Dynamic Date: Today - 4 days (User Request for "Live" feel)
     const date = new Date();
     date.setDate(date.getDate() - 4);
     const dateDebut = date.toISOString().split('T')[0];
 
-    // User Request: Format YYYY-MM-DD
-    const formattedDate = dateDebut; // Force usage of dynamic date
-
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
-    const whereClause = encodeURIComponent(`dateparution >= "${formattedDate}"`);
 
-    // Order by ASC to process oldest first (chronological replay)
-    // LIMIT: 100 tenders per cycle (optimized for 15-min cron frequency)
-    const query = `?where=${whereClause}&order_by=dateparution asc&limit=100`;
+    // Simple date filter only
+    // Note: Department + keyword filtering done POST-fetch by matchesClientSetup()
+    const whereClause = encodeURIComponent(`dateparution >= "${dateDebut}"`);
 
-    console.log(`📡 [SOURCING] Aspirateur lancé depuis : ${formattedDate}`);
+    // Increased limit to 500 to ensure we capture tenders from past 4 days
+    // Even with 100+ tenders/day, this should cover the lookback period
+    const query = `?where=${whereClause}&order_by=dateparution desc&limit=500`;
+
+    console.log(`📡 [SOURCING] Aspirateur lancé depuis : ${dateDebut}`);
+    console.log(`📦 [SOURCING] Limite de fetch : 500 marchés`);
+    console.log(`🔍 [SOURCING] Filtrage par départements et mots-clés : effectué après fetch`);
 
     try {
         const response = await fetch(baseUrl + query);

@@ -1,0 +1,39 @@
+Fetching BOAMP depuis: 2025-12-16
+URL: https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records?where=dateparution%20%3E%3D%20%222025-12-16%22&order_by=dateparution desc&limit=100
+
+Total marchés reçus: 100
+
+================================================================================
+
+RECHERCHE DES MARCHÉS CIBLES
+
+MANQUANT dans les 100 premiers résultats: 25-139491
+
+MANQUANT dans les 100 premiers résultats: 25-138135
+
+
+================================================================================
+
+TOUS LES MARCHÉS CONTENANT 'NETTOYAGE' (dans les 100 résultats):
+
+Total: 4 marchés
+
+1. 25-139717
+   Fourniture, nettoyage et désinfection des conteneurs de collecte des déchets
+   Date: 2025-12-20
+   Depts: 74
+
+2. 25-139759
+   Prestation de nettoyage des locaux communaux
+   Date: 2025-12-20
+   Depts: 4
+
+3. 25-139850
+   Service d'entretien et de nettoyage de toilettes sèches de trois aires de repos sur l'A35, gérées par le Service Autoroutier de la Collectivité européenne d'Alsace
+   Date: 2025-12-20
+   Depts: 67, 68
+
+4. 25-139742
+   Nettoyage des bâtiments de la communauté de communes de Villedieu Intercom
+   Date: 2025-12-20
+   Depts: 50
