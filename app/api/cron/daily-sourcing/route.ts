@@ -28,10 +28,10 @@ export async function GET(request: Request) {
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
         // --- STEP 1: Sourcing (Fetch & Persist Only) ---
-        // Lookback period: 2 Days (optimized for 12h cron frequency)
-        const twoDaysAgo = new Date();
-        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-        const lastDate = twoDaysAgo;
+        // Lookback period: 3 Days (optimized for daily cron on Hobby plan)
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const lastDate = threeDaysAgo;
 
         // First, fetch active clients with their filters
         const clients = await db.client.findMany({
