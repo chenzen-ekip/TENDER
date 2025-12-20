@@ -75,9 +75,23 @@ export function matchesClientSetup(tender: any, clientSettings: { keywords: stri
     // Ici on suppose qu'un client DOIT avoir des mots-clés.
     if (clientSettings.keywords.length === 0) return false;
 
-    const matchKeyword = clientSettings.keywords.some(kw =>
-        searchContent.includes(kw.toLowerCase().trim())
-    );
+    const matchKeyword = clientSettings.keywords.some(kw => {
+        const keywordLower = kw.toLowerCase().trim();
+
+        // 1. Essai de match exact (prioritaire)
+        if (searchContent.includes(keywordLower)) {
+            return true;
+        }
+
+        // 2. Match flexible : on vérifie que TOUS les mots significatifs (>2 lettres) sont présents
+        // Ceci permet "nettoyage de locaux" de matcher "nettoyage... locaux" (ordre flexible)
+        const words = keywordLower.split(/\s+/).filter(w => w.length > 2);
+        if (words.length > 0) {
+            return words.every(word => searchContent.includes(word));
+        }
+
+        return false;
+    });
 
     return matchKeyword;
 }
