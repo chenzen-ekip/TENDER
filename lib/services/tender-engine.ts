@@ -26,7 +26,7 @@ export async function fetchRawTenders(lastCheckDate: Date) {
     const formattedDate = dateDebut; // Force usage of dynamic date
 
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
-    const whereClause = encodeURIComponent(`dateparution > "${formattedDate}"`);
+    const whereClause = encodeURIComponent(`dateparution >= "${formattedDate}"`);
 
     // Order by ASC to process oldest first (chronological replay)
     // LIMIT: 100 tenders per cycle (optimized for 15-min cron frequency)
