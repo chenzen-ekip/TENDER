@@ -80,6 +80,11 @@ export async function analyzeTender(opportunityId: string) {
       "reasoning": "Explication courte en une phrase pour les logs.",
       "client_summary": {
          "title": "Titre orienté Business (ex: 'Contrat Nettoyage 150k€ - 3ans')",
+         "summary": "Résumé en 1-2 phrases du besoin principal",
+         "budget": "Montant estimé avec unité (ex: '150 000€ HT') ou null si non mentionné",
+         "deadline": "Date limite de candidature (format: 'JJ mois AAAA') ou null",
+         "location": "Ville ou département principal ou null",
+         "duration": "Durée du contrat (ex: '12 mois', '3 ans') ou null",
          "key_points": ["Point fort 1 (ex: Critère géo respecté)", "Point fort 2 (ex: Rentabilité estimée haute)"],
          "urgency": "HAUTE" | "MOYENNE" | "FAIBLE"
       }
@@ -96,7 +101,12 @@ export async function analyzeTender(opportunityId: string) {
                 reasoning: "Mode démo (pas de clé API).",
                 client_summary: {
                     title: "Marché Démo - Nettoyage Industriel",
-                    key_points: ["Rentabilité potentielle > 12%", "Secteur géographique 59/62"],
+                    summary: "Contrat de nettoyage pour établissement public avec prestations régulières",
+                    budget: "Non spécifié",
+                    deadline: "Non spécifié",
+                    location: "Région Île-de-France",
+                    duration: "12 mois renouvelable",
+                    key_points: ["Rentabilité potentielle > 12%", "Secteur géographique compatible"],
                     urgency: "HAUTE"
                 }
             };

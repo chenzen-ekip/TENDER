@@ -133,11 +133,49 @@ export async function sendOpportunityAlert(opportunityId: string) {
                                 </div>
 
                                 <!-- AI Analysis Box -->
-                                <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px; padding: 20px; margin-bottom: 30px;">
+                                <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
                                     <h3 style="margin-top: 0; color: #3b82f6; font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 15px;">🧠 Points Clés Stratégiques</h3>
                                     <ul style="padding-left: 20px; color: #334155; font-size: 15px; line-height: 1.6; margin: 0;">
                                         ${aiData.key_points ? aiData.key_points.map((pt: string) => `<li style="margin-bottom: 5px;">${pt}</li>`).join('') : '<li>Analyse détaillée dans le PDF joint.</li>'}
                                     </ul>
+                                </div>
+
+                                <!-- Tender Summary Details -->
+                                <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                                    <h3 style="margin-top: 0; color: #ea580c; font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 15px;">📋 Résumé du Marché</h3>
+                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 14px;">
+                                        ${aiData.summary ? `
+                                        <tr>
+                                            <td colspan="2" style="padding: 8px 0; color: #334155; line-height: 1.6; border-bottom: 1px solid #fed7aa; padding-bottom: 12px; margin-bottom: 12px;">
+                                                ${aiData.summary}
+                                            </td>
+                                        </tr>
+                                        ` : ''}
+                                        ${aiData.budget ? `
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-weight: 600;">💰 Budget estimé:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; text-align: right;">${aiData.budget}</td>
+                                        </tr>
+                                        ` : ''}
+                                        ${aiData.deadline ? `
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-weight: 600;">⏰ Date limite:</td>
+                                            <td style="padding: 8px 0; color: #dc2626; text-align: right; font-weight: 700;">${aiData.deadline}</td>
+                                        </tr>
+                                        ` : ''}
+                                        ${aiData.location ? `
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-weight: 600;">📍 Localisation:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; text-align: right;">${aiData.location}</td>
+                                        </tr>
+                                        ` : ''}
+                                        ${aiData.duration ? `
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #64748b; font-weight: 600;">📅 Durée:</td>
+                                            <td style="padding: 8px 0; color: #0f172a; text-align: right;">${aiData.duration}</td>
+                                        </tr>
+                                        ` : ''}
+                                    </table>
                                 </div>
 
                                 <!-- Action Buttons -->

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { sendAdminDceRequestAlert } from "@/lib/services/notification.service";
 
 interface PageProps {
     params: {
@@ -62,6 +63,17 @@ export default async function DecisionPage({ params }: PageProps) {
             decision_token: null, // Magic link one-time use
         },
     });
+
+    // 4. If client ACCEPTED, notify admin for DCE request (Concierge Mode)
+    if (choice === "accept") {
+        try {
+            await sendAdminDceRequestAlert(opportunity.id);
+            console.log(`✅ [Decision] Admin notified for DCE request: ${opportunity.id}`);
+        } catch (error) {
+            console.error(`❌ [Decision] Failed to notify admin:`, error);
+            // Don't block the user flow if notification fails
+        }
+    }
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
