@@ -28,10 +28,20 @@ export default async function AdminClientsPage() {
     });
 
     return (
-        <div className="container mx-auto py-10">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Clients & Configuration</h1>
-                <ClientForm />
+        <div className="p-8 space-y-8">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold">Clients & Configuration</h1>
+                </div>
+                <div className="flex gap-3">
+                    <a
+                        href="/admin/pending-requests"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        📥 Demandes DCE
+                    </a>
+                    <ClientForm />
+                </div>
             </div>
 
             <div className="border rounded-md">
