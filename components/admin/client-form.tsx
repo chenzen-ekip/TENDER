@@ -99,6 +99,13 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
             formData.append("email", values.email);
             formData.append("sector", values.sector);
             formData.append("certifications", values.certifications || "");
+
+            // Enrichment fields
+            if (values.siret) formData.append("siret", values.siret);
+            if (values.annualRevenue) formData.append("annualRevenue", values.annualRevenue.toString());
+            if (values.employeeCount) formData.append("employeeCount", values.employeeCount.toString());
+            if (values.references) formData.append("references", values.references);
+
             formData.append("marketType", values.marketType);
             formData.append("minBudget", values.minBudget.toString());
             formData.append("mustHaveCerts", values.mustHaveCerts || "");
@@ -177,6 +184,58 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
                                             <FormLabel>Adresse Email</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="contact@acme.com" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="siret"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>SIRET (Optionnel)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="123 456 789 00012" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="annualRevenue"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>CA Annuel (k€)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="800" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="employeeCount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Effectif</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="10" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="references"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Références Majeures</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Mairie de Lyon, SNCF..." {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

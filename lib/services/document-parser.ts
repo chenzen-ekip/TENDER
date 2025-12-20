@@ -89,7 +89,7 @@ async function extractTextFromZip(buffer: Buffer): Promise<string> {
     return await extractTextFromPdf(bestEntry.getData());
 }
 
-async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     try {
         const data = await pdf(buffer);
         return data.text;

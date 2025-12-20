@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
-import { generateOpportunityPdf } from "./pdf.service";
 
 // --- Configuration ---
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
@@ -61,22 +60,41 @@ export async function sendOpportunityAlert(opportunityId: string) {
         });
     }
 
-    const acceptLink = `${BASE_URL}/api/decision?id=${opportunity.id}&decision=APPROVED`;
+    // Link to the "Response Copilot" Landing Page
+    const acceptLink = `${BASE_URL}/opportunities/${opportunity.id}`;
+    // Reject link keeps using the API for quick action
     const rejectLink = `${BASE_URL}/api/decision?id=${opportunity.id}&decision=REJECTED`;
 
-    // 3. Generate PDF Dossier
-    let pdfBuffer: Buffer | null = null;
-    try {
-        pdfBuffer = await generateOpportunityPdf(opportunity);
-    } catch (e) {
-        console.error("⚠️ [Notifier] PDF Generation failed.", e);
-    }
-
-    // Clean analysis for HTML
-    const analysisSummary = opportunity.ai_analysis.replace(/\n/g, "<br>");
+    // 3. (Pivot) PDF Generation Removed
+    // The email body is now the "Product". Direct link to BOAMP is provided.
+    const pdfBuffer = null;
 
     // 4. Format HTML Message (Premium Design)
     const boampUrl = opportunity.tender.pdf_url || `https://www.boamp.fr/pages/avis/?q=idweb:${opportunity.tender.id_boamp}`;
+
+    // Parse AI Analysis (JSON)
+    let aiData: any = {
+        title: opportunity.tender.title,
+        key_points: ["Analyse non disponible"],
+        urgency: "MOYENNE"
+    };
+
+    try {
+        // Handle if it's already an object or a string
+        if (typeof opportunity.ai_analysis === 'string') {
+            // Clean potential markdown code blocks if any (though prompt says strict JSON)
+            const cleanJson = opportunity.ai_analysis.replace(/```json/g, '').replace(/```/g, '').trim();
+            aiData = JSON.parse(cleanJson);
+        } else {
+            aiData = opportunity.ai_analysis;
+        }
+    } catch (e) {
+        console.warn("⚠️ [Notifier] Failed to parse AI JSON for email. Using fallback.");
+    }
+
+    // Urgency Color Logic
+    const urgencyColor = aiData.urgency === "HAUTE" ? "#dc2626" : (aiData.urgency === "MOYENNE" ? "#d97706" : "#059669");
+    const urgencyBg = aiData.urgency === "HAUTE" ? "#fef2f2" : (aiData.urgency === "MOYENNE" ? "#fffbeb" : "#ecfdf5");
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -105,15 +123,20 @@ export async function sendOpportunityAlert(opportunityId: string) {
                         <tr>
                             <td style="padding: 40px;">
                                 <div style="margin-bottom: 25px;">
-                                    <span style="background-color: #dbeafe; color: #1e40af; border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Nouvelle Détection</span>
-                                    <h2 style="margin-top: 15px; margin-bottom: 10px; color: #1e293b; font-size: 20px; line-height: 1.4;">${opportunity.tender.title}</h2>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <span style="background-color: #dbeafe; color: #1e40af; border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Nouvelle Détection</span>
+                                        <span style="background-color: ${urgencyBg}; color: ${urgencyColor}; border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; border: 1px solid ${urgencyColor};">Urgence : ${aiData.urgency}</span>
+                                    </div>
+                                    <h2 style="margin-top: 15px; margin-bottom: 10px; color: #1e293b; font-size: 22px; line-height: 1.4; font-weight: 800;">${aiData.title || opportunity.tender.title}</h2>
                                     <p style="color: #64748b; font-size: 14px; margin: 0;">Client Cible : <strong style="color: #0f172a;">${opportunity.client.name}</strong></p>
                                 </div>
 
                                 <!-- AI Analysis Box -->
                                 <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px; padding: 20px; margin-bottom: 30px;">
-                                    <h3 style="margin-top: 0; color: #3b82f6; font-size: 14px; text-transform: uppercase; font-weight: 700;">🧠 Analyse de Pertinence</h3>
-                                    <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-bottom: 0;">${analysisSummary}</p>
+                                    <h3 style="margin-top: 0; color: #3b82f6; font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 15px;">🧠 Points Clés Stratégiques</h3>
+                                    <ul style="padding-left: 20px; color: #334155; font-size: 15px; line-height: 1.6; margin: 0;">
+                                        ${aiData.key_points ? aiData.key_points.map((pt: string) => `<li style="margin-bottom: 5px;">${pt}</li>`).join('') : '<li>Analyse détaillée dans le PDF joint.</li>'}
+                                    </ul>
                                 </div>
 
                                 <!-- Action Buttons -->
@@ -141,9 +164,10 @@ export async function sendOpportunityAlert(opportunityId: string) {
                                         </td>
                                     </tr>
                                 </table>
+                                </table>
                                 
                                 <p style="text-align: center; color: #94a3b8; font-size: 13px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                                    Le <strong style="color: #64748b;">Dossier de Consultation (DCE)</strong> pré-analysé est joint à cet email 📎.
+                                    Tender Sniper AI - Assistant de Veille Stratégique.
                                 </p>
                             </td>
                         </tr>
@@ -169,25 +193,14 @@ export async function sendOpportunityAlert(opportunityId: string) {
     }
 
     try {
-        const attachments: any[] = [];
-        if (pdfBuffer) {
-            attachments.push({
-                filename: `Dossier_Tender_${opportunity.tender.id_boamp}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf'
-            });
-            console.log(`📄 [Notifier] Attaching PDF (${pdfBuffer.length} bytes)`);
-        }
-
         const info = await transporter.sendMail({
-            from: `"Antigravity Tender" <${GMAIL_USER}>`, // Sender address
+            from: `"Antigravity Tender" < ${GMAIL_USER}> `, // Sender address
             to: clientEmail, // Dynamic Client Email
-            subject: `📢 Opportunité : ${opportunity.tender.title}`, // Subject line
+            subject: `📢 Opportunité: ${opportunity.tender.title} `, // Subject line
             html: htmlContent, // HTML body
-            attachments: attachments
         });
 
-        console.log(`✅ [Notifier] Email sent to ${clientEmail} (MsgID: ${info.messageId})`);
+        console.log(`✅[Notifier] Email sent to ${clientEmail} (MsgID: ${info.messageId})`);
         return { success: true, messageId: info.messageId };
 
     } catch (error) {

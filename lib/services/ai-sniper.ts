@@ -77,12 +77,11 @@ export async function analyzeTender(opportunityId: string) {
     Structure :
     {
       "decision": "VALIDATED" | "REJECTED",
-      "reasoning": "Explication courte en une phrase.",
+      "reasoning": "Explication courte en une phrase pour les logs.",
       "client_summary": {
-         "title": "Titre accrocheur pour le client",
-         "key_points": ["Point fort 1", "Point fort 2"],
-         "urgency": "HAUTE" | "MOYENNE" | "FAIBLE",
-         "whatsapp_hook": "Phrase d'accroche courte pour notification WhatsApp (ex: 'Marché de peinture 150k€ détecté à Lyon !')"
+         "title": "Titre orienté Business (ex: 'Contrat Nettoyage 150k€ - 3ans')",
+         "key_points": ["Point fort 1 (ex: Critère géo respecté)", "Point fort 2 (ex: Rentabilité estimée haute)"],
+         "urgency": "HAUTE" | "MOYENNE" | "FAIBLE"
       }
     }
   `;
@@ -96,10 +95,9 @@ export async function analyzeTender(opportunityId: string) {
                 decision: "VALIDATED",
                 reasoning: "Mode démo (pas de clé API).",
                 client_summary: {
-                    title: "Marché Démo",
-                    key_points: ["Rentabilité haute", "Client public"],
-                    urgency: "HAUTE",
-                    whatsapp_hook: "🔥 Opportunité démo détectée !"
+                    title: "Marché Démo - Nettoyage Industriel",
+                    key_points: ["Rentabilité potentielle > 12%", "Secteur géographique 59/62"],
+                    urgency: "HAUTE"
                 }
             };
         } else {
@@ -158,5 +156,73 @@ export async function analyzeTender(opportunityId: string) {
         console.error("❌ [AI Sniper] OpenAI Error:", error);
         // Return error status so logic can continue or retry
         return { status: "ERROR", error: error };
+    }
+}
+
+/**
+ * Sorts DCE filenames into categories using AI (or heuristic if fails).
+ * Categories: Administrative (RC), Technical (CCTP), Financial (DPGF), Other.
+ * Priority: "Règlement de la Consultation" is explicitly marked.
+ */
+export async function sortDCEFiles(filenames: string[]) {
+    console.log(`📂 [AI Sniper] Sorting ${filenames.length} files...`);
+
+    const systemPrompt = `
+    Tu es un assistant administratif BTP. Ta tâche est de classer des fichiers de marché public.
+    
+    CATÉGORIES:
+    - ADMINISTRATIF: RC (Règlement Consultation), AE (Acte d'Engagement), CCAP...
+    - TECHNIQUE: CCTP (Cahier Clauses Techniques), Plans, CCT...
+    - FINANCIER: DPGF, BPU, DQE, Prix...
+    - AUTRE: Le reste.
+
+    RÈGLE SPÉCIALE:
+    Si un fichier contient "RC" ou "Règlement" ou "Consultation", marque-le comme "PRIORITAIRE" (is_priority: true).
+    Le CCTP est aussi prioritaire.
+
+    FORMAT JSON STRICT:
+    {
+      "files": [
+        { "name": "nom_fichier.pdf", "category": "ADMINISTRATIF" | "TECHNIQUE" | "FINANCIER" | "AUTRE", "is_priority": boolean }
+      ]
+    }
+    `;
+
+    try {
+        if (!process.env.OPENAI_API_KEY) {
+            // Fallback: Simple heuristic sorting
+            return {
+                files: filenames.map(f => {
+                    const lower = f.toLowerCase();
+                    let cat = "AUTRE";
+                    let prio = false;
+
+                    if (lower.includes('rc') || lower.includes('reglement')) { cat = "ADMINISTRATIF"; prio = true; }
+                    else if (lower.includes('ccap')) { cat = "ADMINISTRATIF"; }
+                    else if (lower.includes('cctp')) { cat = "TECHNIQUE"; prio = true; }
+                    else if (lower.includes('dpgf') || lower.includes('bpu') || lower.includes('prix')) { cat = "FINANCIER"; }
+
+                    return { name: f, category: cat, is_priority: prio };
+                })
+            };
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini", // Optimized for cost/speed
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Voici la liste des fichiers : ${JSON.stringify(filenames)}` },
+            ],
+            temperature: 0,
+            response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0]?.message?.content?.trim() || "{}";
+        return JSON.parse(content);
+
+    } catch (e) {
+        console.error("❌ [AI Sniper] File Sorting Error:", e);
+        // Fallback to empty or heuristic
+        return { files: [] };
     }
 }

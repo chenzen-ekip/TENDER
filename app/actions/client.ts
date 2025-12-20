@@ -5,12 +5,19 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 // --- Validation Schemas ---
+// --- Validation Schemas ---
 const ClientFormSchema = z.object({
     // Client Info
     name: z.string().min(2, "Le nom doit faire au moins 2 caractères."),
     email: z.string().email("Email valide requis."),
     sector: z.string().min(2),
     certifications: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)), // Comma separated string -> array
+
+    // Enrichment (Phase 2)
+    siret: z.string().optional(),
+    annualRevenue: z.coerce.number().optional(),
+    employeeCount: z.coerce.number().optional(),
+    references: z.string().optional(),
 
     // Search Config
     keywords: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)),
@@ -24,22 +31,11 @@ const ClientFormSchema = z.object({
     minProfitability: z.coerce.number().min(0).max(100).default(10),
 });
 
-export type ClientFormState = {
-    message?: string;
-    errors?: { [key: string]: string[] };
-    success?: boolean;
-};
+// ... (ClientFormState type remains same) ...
 
-/**
- * Server Action to create a new client and all associated records.
- */
 export async function createClientAction(prevState: ClientFormState, formData: FormData): Promise<ClientFormState> {
-    // 1. Validate Form Data
+    // ... (Validation logic remains same) ...
     const rawData = Object.fromEntries(formData.entries());
-
-    // Handle array transformation manually if Zod coerce/transform is tricky with FormData directly,
-    // but Zod transform above should handle strings.
-
     const validated = ClientFormSchema.safeParse(rawData);
 
     if (!validated.success) {
@@ -53,16 +49,19 @@ export async function createClientAction(prevState: ClientFormState, formData: F
     const data = validated.data;
 
     try {
-        // 2. Database Transaction
         await db.$transaction(async (tx) => {
-            // Create Client with Relations
             const client = await tx.client.create({
                 data: {
                     name: data.name,
                     email: data.email,
                     sector: data.sector,
                     certifications: data.certifications.join(", "),
-                    // Create related records (Pro Architecture)
+                    // Enhanced fields
+                    siret: data.siret,
+                    annualRevenue: data.annualRevenue,
+                    employeeCount: data.employeeCount,
+                    references: data.references,
+
                     keywords: {
                         create: data.keywords.map((k) => ({ word: k }))
                     },
@@ -72,17 +71,15 @@ export async function createClientAction(prevState: ClientFormState, formData: F
                 },
             });
 
-            // Create SearchConfig
+            // ... (SearchConfig and SniperRules creation remains same) ...
             await tx.searchConfig.create({
                 data: {
                     clientId: client.id,
-                    // Keywords/Regions are now on the Client model directly
                     marketType: data.marketType,
                     minBudget: data.minBudget,
                 },
             });
 
-            // Create SniperRules
             await tx.sniperRules.create({
                 data: {
                     clientId: client.id,
@@ -101,13 +98,9 @@ export async function createClientAction(prevState: ClientFormState, formData: F
         return { success: false, message: "Erreur serveur lors de la création du client." };
     }
 }
-// ... existing code ...
 
-/**
- * Server Action to update an existing client.
- */
 export async function updateClientAction(clientId: string, prevState: ClientFormState, formData: FormData): Promise<ClientFormState> {
-    // 1. Validate Form Data
+    // ... (Validation logic remains same) ...
     const rawData = Object.fromEntries(formData.entries());
     const validated = ClientFormSchema.safeParse(rawData);
 
@@ -122,9 +115,7 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
     const data = validated.data;
 
     try {
-        // 2. Database Transaction
         await db.$transaction(async (tx) => {
-            // Update Client Basic Info
             await tx.client.update({
                 where: { id: clientId },
                 data: {
@@ -132,38 +123,29 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
                     email: data.email,
                     sector: data.sector,
                     certifications: data.certifications.join(", "),
+                    // Enhanced fields update
+                    siret: data.siret,
+                    annualRevenue: data.annualRevenue,
+                    employeeCount: data.employeeCount,
+                    references: data.references,
                 },
             });
-
-            // Update Relations (Easy way: Delete all and re-create)
-            // Keywords
+            // ... (Relations update remains same) ...
             await tx.clientKeyword.deleteMany({ where: { clientId } });
             await tx.clientKeyword.createMany({
                 data: data.keywords.map((k) => ({ word: k, clientId })),
             });
-
-            // Departments
             await tx.clientDepartment.deleteMany({ where: { clientId } });
             await tx.clientDepartment.createMany({
                 data: data.departments.map((d) => ({ code: d, clientId })),
             });
 
-            // Update SearchConfig
-            // Upsert in case it was missing for some reason
             await tx.searchConfig.upsert({
                 where: { clientId },
-                update: {
-                    marketType: data.marketType,
-                    minBudget: data.minBudget,
-                },
-                create: {
-                    clientId,
-                    marketType: data.marketType,
-                    minBudget: data.minBudget,
-                }
+                update: { marketType: data.marketType, minBudget: data.minBudget },
+                create: { clientId, marketType: data.marketType, minBudget: data.minBudget }
             });
 
-            // Update SniperRules
             await tx.sniperRules.upsert({
                 where: { clientId },
                 update: {
@@ -181,7 +163,7 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
         });
 
         revalidatePath("/admin/clients");
-        revalidatePath("/"); // Also revalidate home if dashboard is there
+        revalidatePath("/");
         return { success: true, message: "Client mis à jour avec succès !" };
 
     } catch (error) {
@@ -189,7 +171,8 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
         return { success: false, message: "Erreur serveur lors de la mise à jour." };
     }
 }
-// ... existing code ...
+
+
 
 /**
  * Server Action to delete a client.

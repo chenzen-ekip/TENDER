@@ -26,6 +26,13 @@ model Client {
   email          String?  // New email field replacing whatsapp
   sector         String?
   certifications String?  // Keep simple string for now or upgrade later
+  
+  // Phase 2: Enrichment
+  siret          String?
+  annualRevenue  Int?     // En k€
+  employeeCount  Int?
+  references     String?  // Texte libre pour références majeures
+
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -90,6 +97,7 @@ model Tender {
   summary   String
   pdf_url   String?
   status    String   // e.g., EXTRACTED, PROCESSED
+  deadline  DateTime? // Date limite de réception des offres
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -104,6 +112,12 @@ model Opportunity {
   status      String            @default("PENDING") // Enum removed for SQLite
   dume_data   String?           // Future use (Stored as JSON string)
   decision_token String?        @unique
+  
+  // Phase 2: Response Copilot
+  dceFiles    Json?             // List of sorted files (name, url, category)
+  dceUrl      String?           // Direct link to ZIP profile acheteur
+  analysis_summary Json?        // Step 2: Fiche de Synthèse (Critères, Pièces, Contact)
+  
   processedAt DateTime?         // Date when AI analysis was completed
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
