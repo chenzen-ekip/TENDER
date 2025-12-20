@@ -36,7 +36,7 @@ export async function captureDCE(opportunityId: string): Promise<CaptureState> {
             return { success: false, message: "Opportunité introuvable." };
         }
 
-        const sourceUrl = opportunity.tender.pdf_url || opportunity.tender.source_url;
+        const sourceUrl = opportunity.tender.pdf_url;
         if (!sourceUrl) {
             return { success: false, message: "Aucune URL source disponible." };
         }
