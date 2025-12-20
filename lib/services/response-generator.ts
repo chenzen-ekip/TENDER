@@ -53,8 +53,12 @@ async function generateCandidacyLetter(opportunity: any) {
                 }),
                 new Paragraph({ text: "" }), // Spacing
                 new Paragraph({
-                    text: `Objet: Candidature pour le marché "${tender.title}"`,
-                    bold: true,
+                    children: [
+                        new TextRun({
+                            text: `Objet: Candidature pour le marché "${tender.title}"`,
+                            bold: true,
+                        }),
+                    ],
                 }),
                 new Paragraph({ text: "" }),
                 new Paragraph({
@@ -65,22 +69,34 @@ async function generateCandidacyLetter(opportunity: any) {
                     spacing: { before: 200, after: 200 }
                 }),
                 new Paragraph({
-                    text: "Informations Clés:",
-                    bold: true,
+                    children: [
+                        new TextRun({
+                            text: "Informations Clés:",
+                            bold: true,
+                        }),
+                    ],
                 }),
                 new Paragraph({ text: `• SIRET: ${client.siret || "[A COMPLETER]"}` }),
                 new Paragraph({ text: `• Chiffre d'Affaires: ${client.annualRevenue ? client.annualRevenue + " k€" : "[A COMPLETER]"}` }),
                 new Paragraph({ text: `• Effectifs: ${client.employeeCount || "[A COMPLETER]"}` }),
                 new Paragraph({ text: "" }),
                 new Paragraph({
-                    text: "Nos Références:",
-                    bold: true,
+                    children: [
+                        new TextRun({
+                            text: "Nos Références:",
+                            bold: true,
+                        }),
+                    ],
                 }),
                 new Paragraph({ text: client.references || "[Liste des références à insérer]" }),
                 new Paragraph({ text: "" }),
                 new Paragraph({
-                    text: "Pièces Jointes:",
-                    bold: true,
+                    children: [
+                        new TextRun({
+                            text: "Pièces Jointes:",
+                            bold: true,
+                        }),
+                    ],
                 }),
                 ...(analysis?.required_documents || ["DC1", "DC2"]).map((doc: string) =>
                     new Paragraph({ text: `• ${doc}` })
@@ -94,8 +110,12 @@ async function generateCandidacyLetter(opportunity: any) {
                     text: "Cordialement,",
                 }),
                 new Paragraph({
-                    text: "La Direction",
-                    bold: true,
+                    children: [
+                        new TextRun({
+                            text: "La Direction",
+                            bold: true,
+                        }),
+                    ],
                     spacing: { before: 400 }
                 }),
             ],

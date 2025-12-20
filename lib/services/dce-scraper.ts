@@ -25,11 +25,14 @@ export async function scrapeDceUrl(profileUrl: string): Promise<ScrapeResult> {
             // PRODUCTION: Use sparticuz/chromium
             const chromium = require('@sparticuz/chromium');
             browser = await puppeteer.launch({
-                args: chromium.args,
+                args: [
+                    ...chromium.args,
+                    '--ignore-certificate-errors',
+                    '--allow-running-insecure-content'
+                ],
                 defaultViewport: chromium.defaultViewport,
                 executablePath: await chromium.executablePath(),
                 headless: chromium.headless,
-                ignoreHTTPSErrors: true,
             });
         } else {
             // DEVELOPMENT: Use local Chrome (requires Chrome installed on machine or Puppeteer cache)
