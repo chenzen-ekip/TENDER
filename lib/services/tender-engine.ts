@@ -20,34 +20,54 @@ export async function fetchRawTenders(lastCheckDate: Date, clientDepartments: st
     const dateDebut = date.toISOString().split('T')[0];
 
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
-
-    // Simple date filter only
-    // Note: Department + keyword filtering done POST-fetch by matchesClientSetup()
     const whereClause = encodeURIComponent(`dateparution >= "${dateDebut}"`);
 
-    // Increased limit to 500 to ensure we capture tenders from past 4 days
-    // Even with 100+ tenders/day, this should cover the lookback period
-    const query = `?where=${whereClause}&order_by=dateparution desc&limit=500`;
-
     console.log(`📡 [SOURCING] Aspirateur lancé depuis : ${dateDebut}`);
-    console.log(`📦 [SOURCING] Limite de fetch : 500 marchés`);
-    console.log(`🔍 [SOURCING] Filtrage par départements et mots-clés : effectué après fetch`);
+    console.log(`🔄 [SOURCING] Pagination: fetching multiple batches (max 100/batch)`);
+
+    const allTenders: any[] = [];
+    const maxBatches = 5; // Fetch up to 500 tenders total (5 batches × 100)
 
     try {
-        const response = await fetch(baseUrl + query);
-        if (!response.ok) throw new Error(`Erreur API BOAMP: ${response.status}`);
+        for (let batch = 0; batch < maxBatches; batch++) {
+            const offset = batch * 100;
+            const query = `?where=${whereClause}&order_by=dateparution desc&limit=100&offset=${offset}`;
 
-        const data = await response.json();
+            console.log(`📦 [Batch ${batch + 1}/${maxBatches}] Fetching from offset ${offset}...`);
 
-        if (!data.results) return [];
+            const response = await fetch(baseUrl + query);
+            if (!response.ok) {
+                console.error(`❌ Batch ${batch + 1} failed: ${response.status}`);
+                break; // Stop on error
+            }
 
-        console.log(`📦 [ASPIRATEUR] ${data.results.length} nouveaux marchés récupérés.`);
-        return data.results;
+            const data = await response.json();
+            const results = data.results || [];
+
+            if (results.length === 0) {
+                console.log(`✅ No more results at offset ${offset}, stopping pagination`);
+                break; // No more results
+            }
+
+            allTenders.push(...results);
+            console.log(`   → ${results.length} tender added (total: ${allTenders.length})`);
+
+            // If we got less than 100, we've reached the end
+            if (results.length < 100) {
+                console.log(`✅ Reached end of results (got ${results.length} < 100)`);
+                break;
+            }
+        }
+
+        console.log(`📦 [ASPIRATEUR] ${allTenders.length} nouveaux marchés récupérés au total.`);
+        return allTenders;
+
     } catch (error) {
         console.error("❌ Erreur API BOAMP:", error);
-        return [];
+        return allTenders; // Return what we managed to fetch
     }
 }
+// Force deploy for client trial
 // Force deploy for client trial
 
 /**
