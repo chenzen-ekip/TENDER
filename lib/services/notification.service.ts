@@ -75,37 +75,91 @@ export async function sendOpportunityAlert(opportunityId: string) {
     // Clean analysis for HTML
     const analysisSummary = opportunity.ai_analysis.replace(/\n/g, "<br>");
 
-    // 4. Format HTML Message
+    // 4. Format HTML Message (Premium Design)
+    const boampUrl = opportunity.tender.pdf_url || `https://www.boamp.fr/pages/avis/?q=idweb:${opportunity.tender.id_boamp}`;
+
     const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <h2 style="color: #0ea5e9;">🎯 Nouvelle Opportunité Détectée</h2>
-        
-        <p><strong>Client :</strong> ${opportunity.client.name}</p>
-        <p><strong>Titre :</strong> ${opportunity.tender.title}</p>
-        
-        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <h3 style="margin-top:0; color: #0369a1;">🧠 Analyse IA</h3>
-            <p style="color: #334155;">${analysisSummary}</p>
-        </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nouvelle Opportunité TENDER</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 20px;">
+            <tr>
+                <td align="center">
+                    <!-- Main Card -->
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                        
+                        <!-- Header -->
+                        <tr>
+                            <td bgcolor="#0f172a" style="padding: 20px 40px; text-align: center;">
+                                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px;">TENDER SNIPER</h1>
+                                <p style="margin: 5px 0 0; color: #94a3b8; font-size: 14px;">Votre veille stratégique augmentée par IA</p>
+                            </td>
+                        </tr>
 
-        <p>Le dossier technique complet est joint à cet email (PDF).</p>
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px;">
+                                <div style="margin-bottom: 25px;">
+                                    <span style="background-color: #dbeafe; color: #1e40af; border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">Nouvelle Détection</span>
+                                    <h2 style="margin-top: 15px; margin-bottom: 10px; color: #1e293b; font-size: 20px; line-height: 1.4;">${opportunity.tender.title}</h2>
+                                    <p style="color: #64748b; font-size: 14px; margin: 0;">Client Cible : <strong style="color: #0f172a;">${opportunity.client.name}</strong></p>
+                                </div>
 
-        <h3 style="text-align: center; margin-top: 30px;">Votre Décision :</h3>
-        
-        <div style="text-align: center; padding: 20px 0;">
-          <a href="${acceptLink}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
-            ✅ VALIDER L'OFFRE
-          </a>
-          
-          <a href="${rejectLink}" style="display: inline-block; padding: 12px 24px; background-color: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
-            ❌ REJETER
-          </a>
-        </div>
+                                <!-- AI Analysis Box -->
+                                <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px; padding: 20px; margin-bottom: 30px;">
+                                    <h3 style="margin-top: 0; color: #3b82f6; font-size: 14px; text-transform: uppercase; font-weight: 700;">🧠 Analyse de Pertinence</h3>
+                                    <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-bottom: 0;">${analysisSummary}</p>
+                                </div>
 
-        <p style="text-align: center; font-size: 12px; color: #9ca3af; margin-top: 40px;">
-            Cet email a été envoyé automatiquement par Tender Sniper AI.
-        </p>
-    </div>
+                                <!-- Action Buttons -->
+                                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 15px;">
+                                            <a href="${boampUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #0f172a; border: 2px solid #e2e8f0; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 14px; transition: all 0.2s;">
+                                                🔗 Voir l'offre officielle
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center">
+                                            <p style="color: #64748b; font-size: 12px; margin-bottom: 10px;">Positionnez-vous maintenant :</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center">
+                                            <a href="${acceptLink}" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 30px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 16px; margin: 0 5px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+                                                ✅ GO
+                                            </a>
+                                            <a href="${rejectLink}" style="display: inline-block; background-color: #ef4444; color: #ffffff; padding: 12px 30px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 16px; margin: 0 5px; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">
+                                                ❌ NO GO
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <p style="text-align: center; color: #94a3b8; font-size: 13px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                                    Le <strong style="color: #64748b;">Dossier de Consultation (DCE)</strong> pré-analysé est joint à cet email 📎.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td bgcolor="#f8fafc" style="padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                                <p style="color: #cbd5e1; font-size: 12px; margin: 0;">© 2025 Tender Sniper AI. Tous droits réservés.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
     `;
 
     // 5. Send Email via Nodemailer
