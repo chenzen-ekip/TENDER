@@ -35,6 +35,13 @@ const formSchema = z.object({
     email: z.string().email("Email valide requis"),
     sector: z.string().min(1, "Secteur requis"),
     certifications: z.string().optional(),
+
+    // Enrichment (Phase 2)
+    siret: z.string().optional(),
+    annualRevenue: z.coerce.number().optional(),
+    employeeCount: z.coerce.number().optional(),
+    references: z.string().optional(),
+
     keywords: z.array(z.string()).min(1, "Au moins 1 mot-clé requis"),
     departments: z.array(z.string()).min(1, "Au moins 1 département requis"),
     marketType: z.string(),
@@ -61,6 +68,12 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         email: initialData.email || "",
         sector: initialData.sector || "",
         certifications: initialData.certifications || "",
+
+        siret: initialData.siret || "",
+        annualRevenue: initialData.annualRevenue || 0,
+        employeeCount: initialData.employeeCount || 0,
+        references: initialData.references || "",
+
         keywords: initialData.keywords.map((k: any) => k.word),
         departments: initialData.departments.map((d: any) => d.code),
         marketType: initialData.searchConfig?.marketType || "Services",
@@ -73,6 +86,12 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         email: "",
         sector: "Nettoyage",
         certifications: "",
+
+        siret: "",
+        annualRevenue: 0,
+        employeeCount: 0,
+        references: "",
+
         keywords: [],
         departments: [],
         marketType: "Services",
