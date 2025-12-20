@@ -66,7 +66,7 @@ model SearchConfig {
   updatedAt   DateTime @updatedAt
 
   clientId    String   @unique
-  client      Client   @relation(fields: [clientId], references: [id])
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 // SniperRules - AI filtering criteria
@@ -79,7 +79,7 @@ model SniperRules {
   updatedAt              DateTime @updatedAt
 
   clientId               String   @unique
-  client                 Client   @relation(fields: [clientId], references: [id])
+  client                 Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 // Tender - Raw tenders from API
@@ -109,7 +109,7 @@ model Opportunity {
   updatedAt   DateTime          @updatedAt
 
   clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   tenderId    String
   tender      Tender   @relation(fields: [tenderId], references: [id])
 
