@@ -24,14 +24,14 @@ export async function GET(request: Request) {
             errors: 0
         };
 
-        const MAX_ANALYSIS_LIMIT = 5; // Vercel Timeout Protection
+        const MAX_ANALYSIS_LIMIT = 30; // Process more opportunities per 15-min cycle
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
         // --- STEP 1: Sourcing (Fetch & Persist Only) ---
-        // TEST MODE: Force 6 Days Lookback
-        const sixDaysAgo = new Date();
-        sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-        const lastDate = sixDaysAgo; // Override DB state for test
+        // Lookback period: 4 Days (aligned with tender-engine.ts)
+        const fourDaysAgo = new Date();
+        fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+        const lastDate = fourDaysAgo;
 
         // Fetch NEW tenders
         // Note: fetchRawTenders should ideally respect the short interval

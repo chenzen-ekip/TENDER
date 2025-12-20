@@ -29,8 +29,8 @@ export async function fetchRawTenders(lastCheckDate: Date) {
     const whereClause = encodeURIComponent(`dateparution > "${formattedDate}"`);
 
     // Order by ASC to process oldest first (chronological replay)
-    // LIMIT: Reduced to 10 for testing safety (Vercel Timeout)
-    const query = `?where=${whereClause}&order_by=dateparution asc&limit=10`;
+    // LIMIT: 100 tenders per cycle (optimized for 15-min cron frequency)
+    const query = `?where=${whereClause}&order_by=dateparution asc&limit=100`;
 
     console.log(`📡 [SOURCING] Aspirateur lancé depuis : ${formattedDate}`);
 
