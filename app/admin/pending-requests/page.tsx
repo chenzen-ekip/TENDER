@@ -90,11 +90,11 @@ export default function PendingRequestsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-8">
-            <header className="mb-8">
-                <h1 className="text-2xl font-bold text-slate-900">Admin Concierge 🎩</h1>
-                <p className="text-slate-500">Gérez les demandes de DCE manuelles ici.</p>
-            </header>
+        <div className="p-8">
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-slate-900">Demandes DCE en Attente</h1>
+                <p className="text-slate-500 mt-1">Gérez les demandes de dossiers manuels ici.</p>
+            </div>
 
             {loading ? (
                 <div className="flex justify-center py-12">
