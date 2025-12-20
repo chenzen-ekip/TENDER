@@ -28,10 +28,10 @@ export async function GET(request: Request) {
         console.log("⏳ [Cron] Starting Daily Sourcing Job...");
 
         // --- STEP 1: Sourcing (Fetch & Persist Only) ---
-        // Lookback period: 4 Days (aligned with tender-engine.ts)
-        const fourDaysAgo = new Date();
-        fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
-        const lastDate = fourDaysAgo;
+        // Lookback period: 2 Days (optimized for 12h cron frequency)
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        const lastDate = twoDaysAgo;
 
         // First, fetch active clients with their filters
         const clients = await db.client.findMany({

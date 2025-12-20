@@ -14,9 +14,9 @@ import { getPisteToken } from "./piste-auth.service";
  * This should be called ONCE per Cron cycle.
  */
 export async function fetchRawTenders(lastCheckDate: Date, clientDepartments: string[] = [], clientKeywords: string[] = []) {
-    // Dynamic Date: Today - 4 days (User Request for "Live" feel)
+    // Dynamic Date: Today - 2 days (optimized for 12h cron frequency)
     const date = new Date();
-    date.setDate(date.getDate() - 4);
+    date.setDate(date.getDate() - 2);
     const dateDebut = date.toISOString().split('T')[0];
 
     const baseUrl = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
