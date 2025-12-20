@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { scrapeDceUrl } from "@/lib/services/dce-scraper";
 import { StorageService } from "@/lib/services/dce-storage";
 import { sortDCEFiles } from "@/lib/services/ai-sniper";
+import { processDceZip } from "@/lib/services/dce-processing.service";
 import AdmZip from "adm-zip";
 import { revalidatePath } from "next/cache";
 
@@ -55,6 +56,16 @@ export async function captureDCE(opportunityId: string): Promise<CaptureState> {
                     message: scrapeResult.error || "Impossible de trouver le lien DCE."
                 };
             }
+
+            // CRITICAL: If Scraper says it's not a direct download (e.g. it's a page), ABORT.
+            // DO NOT try to unzip an HTML page!!
+            if (!scrapeResult.isDirectDownload) {
+                console.warn(`⚠️ Scraper returned a Page URL, not a ZIP. Aborting download.`);
+                return {
+                    success: false,
+                    message: "Le lien direct vers le ZIP est introuvable (Page scannée uniquement)."
+                };
+            }
             dceUrl = scrapeResult.dceUrl;
         }
 
@@ -66,45 +77,26 @@ export async function captureDCE(opportunityId: string): Promise<CaptureState> {
             return { success: false, message: `Erreur téléchargement ZIP: ${response.statusText}` };
         }
 
+        const contentType = response.headers.get("content-type");
+        if (contentType && !contentType.includes("zip") && !contentType.includes("octet-stream")) {
+            console.error(`❌ Invalid Content-Type: ${contentType}`);
+            return { success: false, message: "Le fichier téléchargé n'est pas un ZIP valide." };
+        }
+
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // 4. EXTRACT & UPLOAD
-        console.log(`📂 Unzipping...`);
-        const zip = new AdmZip(buffer);
-        const zipEntries = zip.getEntries();
+        // 4. EXTRACT & UPLOAD & SORT (Delegated to Service)
+        console.log(`📂 Unzipping & Processing...`);
 
-        const fileUploadPromises = zipEntries
-            .filter(entry => !entry.isDirectory && !entry.entryName.startsWith('__MACOSX'))
-            .map(async (entry) => {
-                const fileLink = await StorageService.uploadFile(entry.getData(), entry.name);
-                return { name: entry.name, url: fileLink };
-            });
+        // Import service dynamically or top-level (Top-level is better, already imported?)
+        // Need to import processDceZip in the file first.
+        // Assuming I will add the import in a separate step or via full replace?
+        // No, partial replace. I will replace the logic block first.
 
-        const uploadedFiles = await Promise.all(fileUploadPromises);
-        console.log(`✅ Uploaded ${uploadedFiles.length} files.`);
+        await processDceZip(buffer, opportunityId, dceUrl);
 
-        // 5. AI SORT
-        const filenames = uploadedFiles.map(f => f.name);
-        const sortedResult = await sortDCEFiles(filenames);
-
-        // Merge URLs with sorting result
-        const finalFiles = sortedResult.files.map((sortedFile: any) => {
-            const match = uploadedFiles.find(u => u.name === sortedFile.name);
-            return {
-                ...sortedFile,
-                url: match?.url || ""
-            };
-        });
-
-        // 6. SAVE TO DB
-        await db.opportunity.update({
-            where: { id: opportunityId },
-            data: {
-                dceFiles: finalFiles as any, // Cast to any for Json compatibility
-                dceUrl: dceUrl // Ensure URL is saved if it wasn't before
-            }
-        });
+        // Re-fetch opportunity to confirm? No need, service updated DB.
 
         revalidatePath(`/opportunities/${opportunityId}`);
         return { success: true, message: "DCE capturé et trié avec succès." };

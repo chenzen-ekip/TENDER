@@ -42,6 +42,7 @@ export async function sendOpportunityAlert(opportunityId: string) {
         return;
     }
 
+    // @ts-ignore
     const clientEmail = opportunity.client.email;
 
     if (!clientEmail) {
@@ -206,5 +207,69 @@ export async function sendOpportunityAlert(opportunityId: string) {
     } catch (error) {
         console.error("❌ [Notifier] Gmail SMTP Error:", error);
         throw error;
+    }
+}
+
+/**
+ * Sends an Email alert to the ADMIN when a client requests a DCE (Concierge Mode).
+ */
+export async function sendAdminDceRequestAlert(opportunityId: string) {
+    console.log(`🔔 [Notifier] Sending Admin Alert for DCE Request: ${opportunityId}`);
+
+    // 1. Fetch Data
+    const opportunity = await db.opportunity.findUnique({
+        where: { id: opportunityId },
+        include: {
+            tender: true,
+            client: true,
+        },
+    });
+
+    if (!opportunity || !opportunity.tender || !opportunity.client) {
+        console.error("❌ [Notifier] Data missing for Admin Alert.");
+        return;
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || GMAIL_USER; // Fallback to sender if no pending email configured
+    const boampLink = opportunity.tender.pdf_url || `https://www.boamp.fr/pages/avis/?q=idweb:${opportunity.tender.id_boamp}`;
+
+    // Direct link to the Admin Upload Page (To be created)
+    const adminActionLink = `${BASE_URL}/admin/pending-requests`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>🚨 Nouvelle Demande de Dossier (DCE)</h2>
+        <p>Le client <strong>${opportunity.client.name}</strong> est intéressé par ce marché :</p>
+        
+        <div style="background: #f3f4f6; padding: 15px; border-left: 4px solid #3b82f6; margin: 15px 0;">
+            <h3>${opportunity.tender.title}</h3>
+            <p>ID: ${opportunity.id}</p>
+        </div>
+
+        <p><strong>Action Requise :</strong></p>
+        <ol>
+            <li>Télécharger le DCE ici : <a href="${boampLink}">Lien Source BOAMP</a></li>
+            <li>Uploader le ZIP sur la plateforme Admin.</li>
+        </ol>
+
+        <a href="${adminActionLink}" style="display: inline-block; background-color: #0f172a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            🚀 Aller à l'Upload Admin
+        </a>
+    </body>
+    </html>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"Tender Bot" <${GMAIL_USER}>`,
+            to: adminEmail,
+            subject: `🚨 ACTION: Demande DCE - ${opportunity.client.name}`,
+            html: htmlContent,
+        });
+        console.log(`✅ [Notifier] Admin Alert sent to ${adminEmail}`);
+    } catch (error) {
+        console.error("❌ [Notifier] Admin Alert Failed:", error);
     }
 }

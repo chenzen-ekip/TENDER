@@ -3,6 +3,8 @@
 import { generateDraftResponse } from "@/lib/services/response-generator";
 import { analyzeRC } from "@/lib/services/ai-extractor";
 import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
+import { sendAdminDceRequestAlert } from "@/lib/services/notification.service";
 
 export async function generateDocsAction(opportunityId: string) {
     try {
@@ -22,5 +24,30 @@ export async function runDeepDiveAction(opportunityId: string) {
     } catch (e: any) {
         console.error("Deep Dive Error:", e);
         return { success: false, error: e.message };
+    }
+}
+
+/**
+ * PHASE 4: CONCIERGE MODE
+ * User clicks "GO" -> Status changes to DCE_REQUESTED -> Admin Notified.
+ */
+export async function requestDceAction(opportunityId: string) {
+    try {
+        console.log(`🙋‍♂️ [Copilot] DCE Request for Opp: ${opportunityId}`);
+
+        // 1. Update Status
+        await db.opportunity.update({
+            where: { id: opportunityId },
+            data: { status: "DCE_REQUESTED" }
+        });
+
+        // 2. Notify Admin
+        await sendAdminDceRequestAlert(opportunityId);
+
+        revalidatePath(`/opportunities/${opportunityId}`);
+        return { success: true, message: "Demande transmise à l'expert." };
+    } catch (e: any) {
+        console.error("Request DCE Error:", e);
+        return { success: false, error: "Erreur lors de la demande." };
     }
 }

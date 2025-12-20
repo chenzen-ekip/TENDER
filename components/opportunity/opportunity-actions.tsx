@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { captureDCE } from "@/app/actions/dce";
-import { generateDocsAction, runDeepDiveAction } from "@/app/actions/copilot";
+import { generateDocsAction, runDeepDiveAction, requestDceAction } from "@/app/actions/copilot";
 import { Loader2, Download, FileText, CheckCircle, Play, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -11,34 +11,32 @@ interface OpportunityActionsProps {
     hasDce: boolean;
     hasAnalysis: boolean;
     analysis?: any;
+    status: string; // "ANALYSIS_PENDING", "DCE_REQUESTED", "ANALYZED"...
 }
 
-export function OpportunityActions({ opportunityId, hasDce, hasAnalysis, analysis }: OpportunityActionsProps) {
+export function OpportunityActions({ opportunityId, hasDce, hasAnalysis, analysis, status: initialStatus }: OpportunityActionsProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<string>("");
     const [progress, setProgress] = useState(0);
     const [draftLinks, setDraftLinks] = useState<{ letter?: string, memory?: string } | null>(null);
 
-    // Handler for "Magic Button" (Start/Capture)
+    // Handler for "Magic Button" (Start/Capture) -> Now CONCIERGE REQUEST
     const handleCapture = async () => {
         setIsLoading(true);
-        setStatus("Initialisation...");
-        setProgress(10);
+        setStatus("Contact de l'expert...");
+        setProgress(30);
 
         try {
-            setStatus("Téléchargement du DCE...");
-            const result = await captureDCE(opportunityId);
+            // Concierge Mode: Request Expert instead of Auto-Scrape
+            const result = await requestDceAction(opportunityId);
 
             if (result.success) {
-                setProgress(50);
-                setStatus("Analyse IA en cours (Deep Dive)...");
-
-                await runDeepDiveAction(opportunityId);
-
+                setProgress(100);
+                setStatus("Demande transmise !");
                 router.refresh();
             } else {
-                setStatus(`Erreur: ${result.message}`);
+                setStatus(`Erreur: ${result.error}`);
             }
         } catch (e: any) {
             setStatus("Erreur critique: " + e.message);
@@ -76,14 +74,26 @@ export function OpportunityActions({ opportunityId, hasDce, hasAnalysis, analysi
                 <h3 className="font-semibold text-slate-900 mb-4">Actions Copilot</h3>
 
                 <div className="space-y-3">
-                    {!hasDce ? (
+                    {/* CONCIERGE STATE */}
+                    {initialStatus === "DCE_REQUESTED" && !hasDce ? (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h4 className="flex items-center gap-2 font-semibold text-blue-800">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Analyse Expert en cours
+                            </h4>
+                            <p className="text-sm text-blue-600 mt-1">
+                                Demande reçue. Nos experts préparent votre dossier technique.
+                                <br />Vous recevrez un mail de confirmation d'ici 2 heures.
+                            </p>
+                        </div>
+                    ) : !hasDce ? (
                         <button
                             onClick={handleCapture}
                             disabled={isLoading}
                             className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-semibold shadow-sm transition-all disabled:opacity-70"
                         >
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                            {isLoading ? status : "Récupérer & Analyser DCE"}
+                            {isLoading ? status : "Récupérer & Analyser DCE (Expert)"}
                         </button>
                     ) : (
                         <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg flex items-center gap-2 text-sm">

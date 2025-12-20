@@ -172,6 +172,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
                             hasDce={!!(opportunity as any).dceFiles}
                             hasAnalysis={!!(opportunity as any).analysis_summary}
                             analysis={(opportunity as any).analysis_summary}
+                            status={opportunity.status}
                         />
 
                     </div>
