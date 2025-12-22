@@ -29,23 +29,17 @@ export async function runDeepDiveAction(opportunityId: string) {
 
 /**
  * PHASE 4: CONCIERGE MODE
- * User clicks "GO" -> Status changes to DCE_REQUESTED -> Admin Notified.
+ * User clicks "GO" -> Creates DCERequest -> Admin Notified.
  */
 export async function requestDceAction(opportunityId: string) {
     try {
         console.log(`🙋‍♂️ [Copilot] DCE Request for Opp: ${opportunityId}`);
 
-        // 1. Update Status
-        await db.opportunity.update({
-            where: { id: opportunityId },
-            data: { status: "DCE_REQUESTED" }
-        });
+        // Use the robust captureDCE action which handles DB + Notifications
+        const { captureDCE } = await import("./dce");
+        const result = await captureDCE(opportunityId);
 
-        // 2. Notify Admin
-        await sendAdminDceRequestAlert(opportunityId);
-
-        revalidatePath(`/opportunities/${opportunityId}`);
-        return { success: true, message: "Demande transmise à l'expert." };
+        return result;
     } catch (e: any) {
         console.error("Request DCE Error:", e);
         return { success: false, error: "Erreur lors de la demande." };

@@ -316,3 +316,49 @@ export async function sendAdminDceRequestAlert(opportunityId: string) {
         console.error("❌ [Notifier] Admin Alert Failed:", error);
     }
 }
+
+/**
+ * Notify User that their DCE is ready to download.
+ */
+export async function sendDceReadyNotification(opportunityId: string) {
+    console.log(`🔔 [Notifier] Sending User 'DCE Ready' Alert: ${opportunityId}`);
+
+    const opportunity = await db.opportunity.findUnique({
+        where: { id: opportunityId },
+        include: { tender: true, client: true }
+    });
+
+    if (!opportunity || !opportunity.client.email) {
+        console.warn("⚠️ Client email not found.");
+        return;
+    }
+
+    // Link to the user dashboard where they can see the files
+    // Assuming /opportunities/[id]
+    const accessLink = `${BASE_URL}/opportunities/${opportunity.id}`;
+
+    const htmlContent = `
+    <h1>📁 Votre Dossier (DCE) est prêt !</h1>
+    <p>Bonjour,</p>
+    <p>Le Dossier de Consultation des Entreprises pour le marché suivant a été traité :</p>
+    <p><strong>${opportunity.tender.title}</strong></p>
+    
+    <p>Notre IA a analysé et trié les pièces (RC, CCTP, DPGF...).</p>
+    
+    <a href="${accessLink}" style="padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px;">
+        📥 Télécharger les pièces
+    </a>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: `"Antigravity Tender" <${GMAIL_USER}>`,
+            to: opportunity.client.email,
+            subject: `✅ DCE Disponible: ${opportunity.tender.title}`,
+            html: htmlContent,
+        });
+        console.log(`✅ [Notifier] User notified of DCE Ready.`);
+    } catch (e) {
+        console.error("❌ Failed to notify user:", e);
+    }
+}

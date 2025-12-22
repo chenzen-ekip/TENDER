@@ -98,6 +98,7 @@ model Tender {
   pdf_url   String?
   status    String   // e.g., EXTRACTED, PROCESSED
   deadline  DateTime? // Date limite de réception des offres
+  raw_data  Json?     // Store full BOAMP API response for AI context
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -114,7 +115,7 @@ model Opportunity {
   decision_token String?        @unique
   
   // Phase 2: Response Copilot
-  dceFiles    Json?             // List of sorted files (name, url, category)
+  dceFiles    Json?             // Legacy: List of sorted files (name, url, category). Deprecated by File model? Keep for backward compat.
   dceUrl      String?           // Direct link to ZIP profile acheteur
   analysis_summary Json?        // Step 2: Fiche de Synthèse (Critères, Pièces, Contact)
   
@@ -126,8 +127,41 @@ model Opportunity {
   client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   tenderId    String
   tender      Tender   @relation(fields: [tenderId], references: [id])
+  
+  // Relations for Concierge Workflow
+  dceRequests DCERequest[]
+  files       File[]
 
   @@unique([clientId, tenderId])
+}
+
+// Concierge Workflow: Tracks User requests for DCE
+model DCERequest {
+  id        String   @id @default(uuid())
+  status    String   @default("PENDING") // PENDING, PROCESSING, READY, REJECTED
+  
+  userEmail String?  // Optional: email of the user who requested (or link to User model if auth exists)
+  
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Robust File Management
+model File {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "CCTP.pdf"
+  url       String   // Storage URL (S3/Blob/Local)
+  category  String   // ADMIN, TECH, FINANCE, OTHER
+  size      Int?     // bytes
+  mimeType  String?  // application/pdf, etc.
+  
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 // System State - For Incremental Sourcing

@@ -24,7 +24,11 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
         where: { id },
         include: {
             tender: true,
-            client: true
+            client: true,
+            dceRequests: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            }
         }
     });
 
@@ -50,6 +54,14 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
         FINANCIER: dceFiles.filter((f: any) => f.category === "FINANCIER"),
         AUTRE: dceFiles.filter((f: any) => f.category === "AUTRE"),
     };
+
+    // Compute UI status based on Requests
+    // If there is ANY pending request, override status to "DCE_REQUESTED"
+    // So the UI shows the blue "Expert en cours" box.
+    const latestRequest = (opportunity as any).dceRequests?.[0];
+    const uiStatus = (latestRequest?.status === "PENDING" || latestRequest?.status === "PROCESSING")
+        ? "DCE_REQUESTED"
+        : opportunity.status;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
@@ -172,7 +184,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
                             hasDce={!!(opportunity as any).dceFiles}
                             hasAnalysis={!!(opportunity as any).analysis_summary}
                             analysis={(opportunity as any).analysis_summary}
-                            status={opportunity.status}
+                            status={uiStatus}
                         />
 
                     </div>

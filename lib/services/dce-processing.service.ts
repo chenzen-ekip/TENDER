@@ -51,16 +51,53 @@ export async function processDceZip(buffer: Buffer, opportunityId: string, dceUr
         };
     });
 
-    // 4. Update DB
-    await db.opportunity.update({
-        where: { id: opportunityId },
-        data: {
-            dceFiles: finalFiles as any, // Cast for JSON
-            status: "EXTRACTED", // Intermediate status
-            ...(dceUrl ? { dceUrl } : {})
+    // 4. Update DB (Transaction: Update Opportunity JSON + Create File Records + Update Request Status)
+    await db.$transaction(async (tx) => {
+        // A. Legacy JSON update (for UI compatibility)
+        await tx.opportunity.update({
+            where: { id: opportunityId },
+            data: {
+                dceFiles: { files: finalFiles } as any,
+                status: "EXTRACTED", // Or "READY"
+                ...(dceUrl ? { dceUrl } : {})
+            }
+        });
+
+        // B. Create robust File records
+        // First delete old files for this opportunity to avoid duplicates if re-uploaded
+        await tx.file.deleteMany({ where: { opportunityId } });
+
+        await tx.file.createMany({
+            data: finalFiles.map((f: any) => ({
+                name: f.name,
+                url: f.url,
+                category: f.category,
+                opportunityId: opportunityId,
+                mimeType: "application/pdf" // default
+            }))
+        });
+
+        // C. Update the DCERequest to READY
+        const pendingRequest = await tx.dCERequest.findFirst({
+            where: {
+                opportunityId: opportunityId,
+                status: { not: "READY" }
+            }
+        });
+
+        if (pendingRequest) {
+            await tx.dCERequest.update({
+                where: { id: pendingRequest.id },
+                data: { status: "READY" }
+            });
         }
     });
 
-    console.log(`✅ [DCE Processor] Success. Files saved to DB.`);
+    // 5. Notify User (Fire & Forget)
+    // We import dynamically to avoid circular deps if any
+    const { sendDceReadyNotification } = await import("@/lib/services/notification.service");
+    await sendDceReadyNotification(opportunityId);
+
+    console.log(`✅ [DCE Processor] Success. Files saved & User notified.`);
     return { success: true, count: finalFiles.length };
 }

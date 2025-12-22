@@ -1,0 +1,67 @@
+﻿­ƒöì DIAGNOSTIC DES MARCH├ëS MANQU├ëS
+
+­ƒôï STEP 1: Configuration des clients actifs
+============================================================
+
+Nombre de clients actifs: 1
+
+Client: SBL (ID: 846b1aff-e4b4-498e-9ad1-43cb2eaf2958)
+  Email: aurel.avoungnassou59@gmail.com
+  D├®partements: 75, 91, 92, 93, 94, 95, 78
+  Mots-cl├®s: Nettoyage de locaux
+  WhatsApp: NON
+
+
+­ƒôª STEP 2: V├®rification dans la base de donn├®es
+============================================================
+
+­ƒöÄ Recherche du march├®: 25-140808
+  ÔØî PAS TROUV├ë dans la DB - Le tender n'a jamais ├®t├® r├®cup├®r├®!
+
+­ƒöÄ Recherche du march├®: 25-140157
+  Ô£à TROUV├ë dans la DB!
+     Titre: PRESTATIONS DE NETTOYAGE ET ENTRETIEN DES LOCAUX DE LA CAF DE LA SEINE-SAINT-DENIS
+     Status: EXTRACTED
+     Opportunities cr├®├®es: 1
+       - Client: SBL
+         Status: AUTO_REJECTED
+         Match Score: 0
+
+­ƒöÄ Recherche du march├®: 25-139993
+  ÔØî PAS TROUV├ë dans la DB - Le tender n'a jamais ├®t├® r├®cup├®r├®!
+
+
+ÔÅ░ STEP 3: ├ëtat du syst├¿me
+============================================================
+Derni├¿re v├®rification: Mon Dec 22 2025 01:23:34 GMT+0100 (heure normale dÔÇÖEurope centrale)
+Il y a 0.1 heures
+
+
+­ƒîÉ STEP 4: Test de r├®cup├®ration BOAMP (API directe)
+============================================================
+
+­ƒöÄ Recherche BOAMP pour: 25-140808
+  Ô£à TROUV├ë sur BOAMP!
+     Titre: Prestations de nettoyage des espaces du mus├®e Rodin sur ses sites de Paris et de Meudon
+     Date publication: 2025-12-21
+     D├®partements: 75
+     Aper├ºu: Prestations de nettoyage des espaces du mus├®e Rodin sur ses sites de Paris et de Meudon...
+
+­ƒöÄ Recherche BOAMP pour: 25-140157
+  Ô£à TROUV├ë sur BOAMP!
+     Titre: PRESTATIONS DE NETTOYAGE ET ENTRETIEN DES LOCAUX DE LA CAF DE LA SEINE-SAINT-DENIS
+     Date publication: 2025-12-21
+     D├®partements: 93
+     Aper├ºu: PRESTATIONS DE NETTOYAGE ET ENTRETIEN DES LOCAUX DE LA CAF DE LA SEINE-SAINT-DENIS...
+
+­ƒöÄ Recherche BOAMP pour: 25-139993
+  Ô£à TROUV├ë sur BOAMP!
+     Titre: Nettoyage et entretien des locaux des b├ótiments de la CCPMF - 2026-2029
+     Date publication: 2025-12-20
+     D├®partements: 77
+     Aper├ºu: Nettoyage et entretien des locaux des b├ótiments de la CCPMF - 2026-2029...
+
+
+============================================================
+­ƒôè DIAGNOSTIC TERMIN├ë
+============================================================

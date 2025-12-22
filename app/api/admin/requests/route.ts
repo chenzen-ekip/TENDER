@@ -1,23 +1,40 @@
-
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
     try {
-        const requests = await db.opportunity.findMany({
-            where: { status: "DCE_REQUESTED" },
+        const pendingRequests = await db.dCERequest.findMany({
+            where: { status: "PENDING" },
             include: {
-                client: { select: { name: true } },
-                tender: { select: { title: true, id_boamp: true, pdf_url: true } }
+                opportunity: {
+                    include: {
+                        tender: true,
+                        client: true
+                    }
+                }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" }
         });
 
-        return NextResponse.json(requests);
+        // Transform for UI
+        const data = pendingRequests.map(req => ({
+            id: req.id,
+            opportunityId: req.opportunityId,
+            tender: {
+                title: req.opportunity.tender.title,
+                id_boamp: req.opportunity.tender.id_boamp,
+                pdf_url: req.opportunity.tender.pdf_url
+            },
+            client: {
+                name: req.opportunity.client.name
+            },
+            status: req.status,
+            createdAt: req.createdAt
+        }));
+
+        return NextResponse.json(data);
     } catch (error) {
-        console.error("Fetch Requests Error:", error);
+        console.error("Admin Requests API Error:", error);
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }

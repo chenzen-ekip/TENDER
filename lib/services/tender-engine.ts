@@ -90,10 +90,20 @@ export function matchesClientSetup(tender: any, clientSettings: { keywords: stri
     // On concatène objet + donnees pour une recherche large
     const searchContent = (tender.objet + " " + (tender.donnees || "")).toLowerCase();
 
-    // Si pas de mots-clés définis, on rejette (sécurité) ou on accepte tout (à décider). 
-    // Ici on suppose qu'un client DOIT avoir des mots-clés.
+    // Si pas de mots-clés définis, on rejette (sécurité)
     if (clientSettings.keywords.length === 0) return false;
 
+    // ⚠️ RÈGLE ABSOLUE: Si "nettoyage" ou "entretien" présents, TOUJOURS matcher
+    // pour que l'AI puisse analyser en détail
+    const criticalKeywords = ["nettoyage", "entretien", "propreté"];
+    const hasCriticalKeyword = criticalKeywords.some(kw => searchContent.includes(kw));
+
+    if (hasCriticalKeyword) {
+        console.log(`🎯 [MATCHING] Mot-clé critique détecté → MATCH FORCÉ pour analyse AI`);
+        return true; // Force match pour que l'AI analyse
+    }
+
+    // Sinon, matching flexible normal
     const matchKeyword = clientSettings.keywords.some(kw => {
         const keywordLower = kw.toLowerCase().trim();
 
@@ -132,7 +142,8 @@ export function mapTenderToDbObject(item: any) {
         title: item.objet || "Marché Public",
         summary: description.substring(0, 1000), // Enforce DB limit
         pdf_url: item.url_avis || `https://www.boamp.fr/pages/avis/?q=idweb:${item.idweb}`,
-        status: "EXTRACTED"
+        status: "EXTRACTED",
+        raw_data: item // Store complete BOAMP response for AI analysis
     };
 }
 
