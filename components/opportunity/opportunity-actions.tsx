@@ -36,7 +36,7 @@ export function OpportunityActions({ opportunityId, hasDce, hasAnalysis, analysi
                 setStatus("Demande transmise !");
                 router.refresh();
             } else {
-                setStatus(`Erreur: ${result.error}`);
+                setStatus(`Erreur: ${result.message}`);
             }
         } catch (e: any) {
             setStatus("Erreur critique: " + e.message);

@@ -42,6 +42,6 @@ export async function requestDceAction(opportunityId: string) {
         return result;
     } catch (e: any) {
         console.error("Request DCE Error:", e);
-        return { success: false, error: "Erreur lors de la demande." };
+        return { success: false, message: "Erreur lors de la demande." };
     }
 }
