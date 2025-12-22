@@ -52,7 +52,7 @@ export async function processDceZip(buffer: Buffer, opportunityId: string, dceUr
     });
 
     // 4. Update DB (Transaction: Update Opportunity JSON + Create File Records + Update Request Status)
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: any) => {
         // A. Legacy JSON update (for UI compatibility)
         await tx.opportunity.update({
             where: { id: opportunityId },
