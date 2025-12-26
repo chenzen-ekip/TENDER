@@ -7,19 +7,19 @@ import Link from "next/link";
 import { sendAdminDceRequestAlert } from "@/lib/services/notification.service";
 
 interface PageProps {
-    params: {
+    params: Promise<{
         token: string;
         choice: string;
-    };
+    }>;
 }
 
 export default async function DecisionPage({ params }: PageProps) {
-    const { token, choice } = params;
+    const { token, choice } = await params;
 
     // 1. Validate Token
     const opportunity = await db.opportunity.findUnique({
         where: { decision_token: token },
-        include: { tender: true },
+        include: { tender: true, client: true },
     });
 
     if (!opportunity) {
@@ -65,12 +65,47 @@ export default async function DecisionPage({ params }: PageProps) {
         },
     });
 
-    // 4. If client ACCEPTED, notify admin for DCE request (Concierge Mode)
+    // 4. Special Demo Logic for "Apoem Nettoyage"
+    // If client is "Apoem Nettoyage" AND choice is "accept", we bypass the admin loop for the video demo.
+    if (choice === "accept" && (opportunity.client.name === "Apoem Nettoyage" || opportunity.client.name.includes("Apoem"))) {
+
+        // Auto-upgrade status to DCE_READY immediately
+        await db.opportunity.update({
+            where: { id: opportunity.id },
+            data: { status: "DCE_READY" }
+        });
+
+        // Redirect to the Opportunity Page (where files are visible)
+        // We use 'redirect' from next/navigation which throws an error, so it must be last.
+        const { redirect } = await import("next/navigation");
+        redirect(`/opportunities/${opportunity.id}`);
+    }
+
+    // 5. Normal Flow: If client ACCEPTED, notify admin for DCE request
     if (choice === "accept") {
         // Fire and forget - don't block user experience if notification fails
         sendAdminDceRequestAlert(opportunity.id).catch((error) => {
             console.error(`❌ [Decision] Failed to notify admin:`, error);
         });
+
+        // --- NEW: Notify n8n for Telegram/Workflow orchestration ---
+        const n8nDecisionWebhook = process.env.N8N_DECISION_WEBHOOK_URL;
+        if (n8nDecisionWebhook) {
+            fetch(n8nDecisionWebhook, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-n8n-key": process.env.N8N_SECRET_KEY || ""
+                },
+                body: JSON.stringify({
+                    eventId: "CLIENT_DECISION",
+                    choice: "ACCEPT",
+                    opportunityId: opportunity.id,
+                    clientName: opportunity.client.name,
+                    tenderTitle: opportunity.tender.title,
+                })
+            }).catch(e => console.error("❌ [Decision] n8n notify failed:", e));
+        }
     }
 
 

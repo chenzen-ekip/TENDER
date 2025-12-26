@@ -10,20 +10,21 @@ const ClientFormSchema = z.object({
     // Client Info
     name: z.string().min(2, "Le nom doit faire au moins 2 caractères."),
     email: z.string().email("Email valide requis."),
-    sector: z.string().min(2),
-    certifications: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)), // Comma separated string -> array
+    sector: z.string().optional().default("Nettoyage"),
+    certifications: z.string().optional().transform((str) => str ? str.split(",").map((s) => s.trim()).filter(Boolean) : []), // Comma separated string -> array
 
     // Enrichment (Phase 2)
     siret: z.string().optional(),
-    annualRevenue: z.coerce.number().optional(),
-    employeeCount: z.coerce.number().optional(),
+    annualRevenue: z.coerce.number().optional().default(0),
+    employeeCount: z.coerce.number().optional().default(0),
     references: z.string().optional(),
 
     // Search Config
-    keywords: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)),
-    departments: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)),
-    marketType: z.string().default("Services"),
-    minBudget: z.coerce.number().min(0).default(0),
+    searchUrl: z.string().url("URL invalide.").optional().or(z.literal("")),
+    keywords: z.string().optional().transform((str) => str ? str.split(",").map((s) => s.trim()).filter(Boolean) : []),
+    departments: z.string().optional().transform((str) => str ? str.split(",").map((s) => s.trim()).filter(Boolean) : []),
+    marketType: z.string().optional().default("Services"),
+    minBudget: z.coerce.number().optional().default(0),
 
     // Sniper Rules
     mustHaveCerts: z.string().optional().transform((str) => str ? str.split(",").map((s) => s.trim()).filter(Boolean) : []),
@@ -80,6 +81,7 @@ export async function createClientAction(prevState: ClientFormState, formData: F
                     certifications: data.certifications.join(", "),
                     // Enhanced fields
                     siret: data.siret,
+                    searchUrl: data.searchUrl || null,
                     annualRevenue: data.annualRevenue,
                     employeeCount: data.employeeCount,
                     references: data.references,
@@ -148,6 +150,7 @@ export async function updateClientAction(clientId: string, prevState: ClientForm
                     certifications: data.certifications.join(", "),
                     // Enhanced fields update
                     siret: data.siret,
+                    searchUrl: data.searchUrl || null,
                     annualRevenue: data.annualRevenue,
                     employeeCount: data.employeeCount,
                     references: data.references,

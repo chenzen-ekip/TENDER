@@ -157,6 +157,19 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
                                 ))}
                             </div>
                         </section>
+
+                        {/* 3. Full Announcement Content */}
+                        <section className="mt-8">
+                            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="w-1 h-6 bg-indigo-500 rounded-full"></div>
+                                Annonce BOAMP Intégrale
+                            </h2>
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 overflow-hidden">
+                                <div className="prose prose-slate max-w-none text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {tender.summary || "Aucun contenu détaillé disponible pour le moment."}
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                     {/* 3. Right Column: AI Deep Dive + Actions */}

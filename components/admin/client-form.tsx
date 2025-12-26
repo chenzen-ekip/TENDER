@@ -18,6 +18,7 @@ import {
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -25,9 +26,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Loader2 } from "lucide-react";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { DEPARTMENTS } from "@/constants/departments";
-import { DESCRIPTORS } from "@/constants/descriptors";
 
 // Schema adapted for Frontend Form Management (Arrays)
 const formSchema = z.object({
@@ -42,8 +40,9 @@ const formSchema = z.object({
     employeeCount: z.coerce.number().optional(),
     references: z.string().optional(),
 
-    keywords: z.array(z.string()).min(1, "Au moins 1 mot-clé requis"),
-    departments: z.array(z.string()).min(1, "Au moins 1 département requis"),
+    keywords: z.array(z.string()).default([]),
+    departments: z.array(z.string()).default([]),
+    searchUrl: z.string().url("URL invalide").optional().or(z.literal("")),
     marketType: z.string(),
     minBudget: z.coerce.number(),
     mustHaveCerts: z.string().optional(),
@@ -70,6 +69,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         certifications: initialData.certifications || "",
 
         siret: initialData.siret || "",
+        searchUrl: initialData.searchUrl || "",
         annualRevenue: initialData.annualRevenue || 0,
         employeeCount: initialData.employeeCount || 0,
         references: initialData.references || "",
@@ -88,6 +88,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         certifications: "",
 
         siret: "",
+        searchUrl: "",
         annualRevenue: 0,
         employeeCount: 0,
         references: "",
@@ -127,6 +128,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
 
             formData.append("marketType", values.marketType);
             formData.append("minBudget", values.minBudget.toString());
+            formData.append("searchUrl", values.searchUrl || "");
             formData.append("mustHaveCerts", values.mustHaveCerts || "");
             formData.append("forbiddenKeywords", values.forbiddenKeywords || "");
             formData.append("minProfitability", values.minProfitability.toString());
@@ -152,10 +154,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         });
     }
 
-    // Transform options for MultiSelect
-    const deptOptions = DEPARTMENTS.map(d => ({ value: d.code, label: `${d.code} - ${d.name}` }));
-    // Descriptors are already in good format but allow searching by simple label
-    const keywordOptions = DESCRIPTORS.map(d => ({ value: d.value, label: d.label })); // value is the rigorous keyword
+    // URL based sourcing
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -180,7 +179,7 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
 
                         {/* Section 1: Client Info */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium border-b pb-2">Infos Client</h3>
+                            <h3 className="text-lg font-medium border-b pb-2">Identification</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -200,61 +199,9 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
                                     name="email"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Adresse Email</FormLabel>
+                                            <FormLabel>Adresse Email de notification</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="contact@acme.com" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="siret"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>SIRET (Optionnel)</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="123 456 789 00012" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="annualRevenue"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>CA Annuel (k€)</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="800" {...field} value={field.value || ''} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="employeeCount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Effectif</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="10" {...field} value={field.value || ''} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="references"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Références Majeures</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Mairie de Lyon, SNCF..." {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -263,76 +210,25 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
                             </div>
                         </div>
 
-                        {/* Section 2: Search Config */}
+                        {/* Section 2: Sourcing Radar */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium border-b pb-2">Ciblage Précis</h3>
-                            <div className="grid grid-cols-1 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="keywords"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Métiers (Descripteurs BOAMP)</FormLabel>
-                                            <FormControl>
-                                                <MultiSelect
-                                                    options={keywordOptions}
-                                                    selected={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Rechercher un métier (ex: Peinture, Nettoyage...)"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="departments"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Zone Géographique</FormLabel>
-                                            <FormControl>
-                                                <MultiSelect
-                                                    options={deptOptions}
-                                                    selected={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Rechercher un département (ex: 75, Nord...)"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 mt-4">
-                                <FormField
-                                    control={form.control}
-                                    name="minBudget"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Budget Min (€)</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} value={field.value as string | number} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="sector"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Secteur (Info)</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="BTP" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                            <h3 className="text-lg font-medium border-b pb-2">Sourcing Radar</h3>
+                            <FormField
+                                control={form.control}
+                                name="searchUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Lien de Recherche BOAMP (Radar automatique)</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://www.boamp.fr/pages/recherche/?..." {...field} />
+                                        </FormControl>
+                                        <FormDescription>
+                                            Collez l'URL de recherche BOAMP déjà filtrée. Elle sera utilisée pour le sourcing horaire.
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
 
                         {/* Section 3: AI Rules */}
@@ -368,12 +264,9 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={isPending}>
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isEdit ? "Mettre à jour" : "Créer le Client"}
-                            </Button>
-                        </div>
+                        <Button type="submit" className="w-full" disabled={isPending}>
+                            {isPending ? "Enregistrement..." : (isEdit ? "Enregistrer les modifications" : "Créer le Client")}
+                        </Button>
                     </form>
                 </Form>
             </DialogContent>
