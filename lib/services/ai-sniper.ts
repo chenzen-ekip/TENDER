@@ -28,8 +28,8 @@ INSTRUCTIONS:
 Retourne UNIQUEMENT un objet JSON avec cette structure:
 {
   "match_score": 0-100,
-  "ai_analysis": "Résumé ultra-concis en 3 points (Impact financier, Difficulté technique, Gain potentiel)",
-  "status": "VALIDATED" ou "REJECTED" (REJECTED si le score est < 70 ou si un mot-clé interdit est présent)
+  "ai_analysis": "Résumé stratégique complet (Points forts, points d'attention, et recommandation d'angle d'attaque)",
+  "status": "VALIDATED"
 }
     `;
 

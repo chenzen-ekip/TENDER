@@ -38,7 +38,7 @@ export async function sendTelegramAlert(message: string) {
 export async function sendClientEmailAlert(clientEmail: string, tenderTitle: string, analysis: string, matchScore: number, tenderId: string, clientId: string) {
     console.log(`📧 [Notifier] Mock Email sent to ${clientEmail} for Tender: ${tenderTitle}`);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.TENDER_BASE_URL || "http://localhost:3000";
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.TENDER_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
     const goLink = `${baseUrl}/api/tender/go?clientId=${clientId}&tenderId=${tenderId}`;
 
     console.log(`🔗 [Notifier] Invitation Link: ${goLink}`);

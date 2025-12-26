@@ -1,0 +1,10 @@
+Vérification de la configuration du client SBL
+
+❌ Client SBL non trouvé dans la base de données!
+
+Liste de tous les clients:
+
+- apoem nettoyage (ID: 31f25d58-1237-4964-82c7-8dfea07b537b)
+  Active: true
+  Keywords: 
+  Departments: 

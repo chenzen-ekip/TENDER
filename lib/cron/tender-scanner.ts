@@ -67,11 +67,15 @@ export async function scanAllTenders() {
                     }
 
                     // 3. Fetch Full HTML for deep analysis
-                    const fullText = await fetchTenderFullHtml(idweb);
-                    if (!fullText) continue;
+                    let fullText = await fetchTenderFullHtml(idweb);
+                    const analysisText = fullText || record.summary || record.title || "Aucun contenu";
+
+                    if (!fullText) {
+                        console.warn(`⚠️ [Radar] HTML non disponible pour ${idweb}, repli sur le résumé API.`);
+                    }
 
                     // 4. AI Sniper Analysis
-                    const analysis = await analyzeTenderWithAI(fullText, client.sniperRules);
+                    const analysis = await analyzeTenderWithAI(analysisText, client.sniperRules);
                     console.log(`🤖 [Radar] AI Analysis for ${idweb}: Score=${analysis.match_score}, Status=${analysis.status}`);
 
                     // 5. DB Upsert (Tender)
@@ -93,28 +97,26 @@ export async function scanAllTenders() {
                         }
                     });
 
-                    // 6. Save Opportunity & Notify if Validated
-                    if (analysis.status === "VALIDATED") {
-                        await db.opportunity.create({
-                            data: {
-                                clientId: client.id,
-                                tenderId: tender.id,
-                                match_score: analysis.match_score,
-                                ai_analysis: analysis.ai_analysis,
-                                status: "PENDING",
-                                processedAt: new Date()
-                            }
-                        });
-
-                        stats.validated_opportunities++;
-
-                        // 7. Fire Alerts
-                        await sendTelegramAlert(`🔔 **NOUVEAU GOLD NUGGET**\n\nClient: ${client.name}\nMarché: ${tender.title}\nScore IA: ${analysis.match_score}%\n\nL'expert doit aller voir ! 🚀`);
-
-                        // Email (Optional - Mocked for now)
-                        if (client.email) {
-                            await sendClientEmailAlert(client.email, tender.title, analysis.ai_analysis, analysis.match_score, idweb, client.id);
+                    // 6. Save Opportunity & Notify Systematically
+                    await db.opportunity.create({
+                        data: {
+                            clientId: client.id,
+                            tenderId: tender.id,
+                            match_score: analysis.match_score,
+                            ai_analysis: analysis.ai_analysis,
+                            status: "PENDING",
+                            processedAt: new Date()
                         }
+                    });
+
+                    stats.validated_opportunities++;
+
+                    // 7. Fire Alerts
+                    await sendTelegramAlert(`🔔 **NOUVEAU MARCHÉ DÉTECTÉ**\n\nClient: ${client.name}\nMarché: ${tender.title}\nScore IA: ${analysis.match_score}%\n\nL'expert doit aller voir ! 🚀`);
+
+                    // Email (Mocked for now)
+                    if (client.email) {
+                        await sendClientEmailAlert(client.email, tender.title, analysis.ai_analysis, analysis.match_score, idweb, client.id);
                     }
 
                 } catch (tenderError) {
