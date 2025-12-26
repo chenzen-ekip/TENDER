@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/db";
 import { ClientForm } from "@/components/admin/client-form";
 import { ClientActions } from "@/components/admin/client-actions";
@@ -11,6 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminClientsPage() {
     const clients = await db.client.findMany({
@@ -74,16 +74,16 @@ export default async function AdminClientsPage() {
                                     <TableCell>
                                         <div className="flex flex-col gap-2 max-w-[300px]">
                                             <div className="flex flex-wrap gap-1">
-                                                {client.keywords.slice(0, 3).map((k: any) => (
+                                                {client.keywords?.slice(0, 3).map((k: any) => (
                                                     <Badge key={k.id} variant="outline" className="text-[10px] px-1 py-0">{k.word}</Badge>
                                                 ))}
-                                                {client.keywords.length > 3 && <span className="text-[10px] text-muted-foreground">+{client.keywords.length - 3}</span>}
+                                                {client.keywords?.length > 3 && <span className="text-[10px] text-muted-foreground">+{client.keywords.length - 3}</span>}
                                             </div>
                                             <div className="flex flex-wrap gap-1">
-                                                {client.departments.slice(0, 5).map((d: any) => (
+                                                {client.departments?.slice(0, 5).map((d: any) => (
                                                     <Badge key={d.id} variant="secondary" className="text-[10px] px-1 py-0">{d.code}</Badge>
                                                 ))}
-                                                {client.departments.length === 0 && <span className="text-[10px] text-muted-foreground">National</span>}
+                                                {(client.departments?.length === 0 || !client.departments) && <span className="text-[10px] text-muted-foreground">National</span>}
                                             </div>
                                         </div>
                                     </TableCell>
@@ -100,7 +100,7 @@ export default async function AdminClientsPage() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="secondary">{client._count.opportunities}</Badge>
+                                        <Badge variant="secondary">{client._count?.opportunities || 0}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <ClientActions client={client} />
@@ -114,6 +114,3 @@ export default async function AdminClientsPage() {
         </div>
     );
 }
-
-// Simple button stub until we import it properly or use the icon only
-import { Button } from "@/components/ui/button";

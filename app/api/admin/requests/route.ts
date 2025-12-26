@@ -21,12 +21,12 @@ export async function GET() {
             id: req.id,
             opportunityId: req.opportunityId,
             tender: {
-                title: req.opportunity.tender.title,
-                id_boamp: req.opportunity.tender.id_boamp,
-                pdf_url: req.opportunity.tender.pdf_url
+                title: req.opportunity?.tender?.title || "Sans titre",
+                id_boamp: req.opportunity?.tender?.id_boamp || "",
+                pdf_url: req.opportunity?.tender?.pdf_url || null
             },
             client: {
-                name: req.opportunity.client.name
+                name: req.opportunity?.client?.name || "Inconnu"
             },
             status: req.status,
             createdAt: req.createdAt

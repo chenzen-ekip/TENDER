@@ -74,8 +74,8 @@ export function ClientForm({ initialData, children }: ClientFormProps) {
         employeeCount: initialData.employeeCount || 0,
         references: initialData.references || "",
 
-        keywords: initialData.keywords.map((k: any) => k.word),
-        departments: initialData.departments.map((d: any) => d.code),
+        keywords: initialData.keywords?.map((k: any) => k.word) || [],
+        departments: initialData.departments?.map((d: any) => d.code) || [],
         marketType: initialData.searchConfig?.marketType || "Services",
         minBudget: initialData.searchConfig?.minBudget || 0,
         mustHaveCerts: initialData.sniperRules?.mustHaveCertifications || "",
