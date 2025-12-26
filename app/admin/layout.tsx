@@ -1,5 +1,3 @@
-"use client";
-
 import { AdminNav } from "@/components/admin/admin-nav";
 
 export default function AdminLayout({
