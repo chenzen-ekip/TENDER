@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
+import { sendTelegramAlert } from "@/lib/services/notifier";
 
 // --- Configuration ---
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
@@ -312,6 +313,14 @@ export async function sendAdminDceRequestAlert(opportunityId: string) {
             html: htmlContent,
         });
         console.log(`✅ [Notifier] Admin Alert sent to ${adminEmail}`);
+
+        // Also notify via Telegram
+        await sendTelegramAlert(
+            `🚨 **ACTION: DEMANDE DCE**\n\n` +
+            `Client: ${opportunity.client.name}\n` +
+            `Marché: ${opportunity.tender.title}\n\n` +
+            `Lien: ${adminActionLink}`
+        );
     } catch (error) {
         console.error("❌ [Notifier] Admin Alert Failed:", error);
     }

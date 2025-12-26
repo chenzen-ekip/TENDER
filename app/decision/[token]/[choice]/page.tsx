@@ -87,25 +87,6 @@ export default async function DecisionPage({ params }: PageProps) {
         sendAdminDceRequestAlert(opportunity.id).catch((error) => {
             console.error(`❌ [Decision] Failed to notify admin:`, error);
         });
-
-        // --- NEW: Notify n8n for Telegram/Workflow orchestration ---
-        const n8nDecisionWebhook = process.env.N8N_DECISION_WEBHOOK_URL;
-        if (n8nDecisionWebhook) {
-            fetch(n8nDecisionWebhook, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-n8n-key": process.env.N8N_SECRET_KEY || ""
-                },
-                body: JSON.stringify({
-                    eventId: "CLIENT_DECISION",
-                    choice: "ACCEPT",
-                    opportunityId: opportunity.id,
-                    clientName: opportunity.client.name,
-                    tenderTitle: opportunity.tender.title,
-                })
-            }).catch(e => console.error("❌ [Decision] n8n notify failed:", e));
-        }
     }
 
 
